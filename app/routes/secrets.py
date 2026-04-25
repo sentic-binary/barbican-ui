@@ -69,7 +69,7 @@ def list_secrets():
             limit=500, offset=0, name=name_filter,
         )
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
         all_data = {"secrets": [], "total": 0}
 
     all_secrets = all_data.get("secrets", [])
@@ -166,7 +166,7 @@ def create_secret():
         flash("Secret created successfully.", "success")
         return redirect(url_for("secrets.get_secret", secret_id=secret_id))
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
         return redirect(url_for("secrets.create_secret"))
 
 
@@ -180,7 +180,7 @@ def get_secret(secret_id: str):
             auth.barbican_endpoint, auth.token, auth.project_id, secret_id
         )
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
         return redirect(url_for("secrets.list_secrets"))
 
     payload = None
@@ -247,7 +247,7 @@ def update_secret(secret_id: str):
         )
         flash("Secret payload updated.", "success")
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
 
     return redirect(url_for("secrets.get_secret", secret_id=secret_id))
 
@@ -263,7 +263,7 @@ def delete_secret(secret_id: str):
         )
         flash("Secret deleted.", "success")
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
 
     return redirect(url_for("secrets.list_secrets"))
 

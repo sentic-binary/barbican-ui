@@ -119,6 +119,8 @@ def login():
         )
         return redirect(url_for("auth.login"))
 
+    # Session fixation protection: clear old session before saving new auth
+    session.clear()
     save_auth(token)
     flash(f"Logged in as {token.user_name} ({token.project_name})", "success")
     return redirect(url_for("secrets.list_secrets"))

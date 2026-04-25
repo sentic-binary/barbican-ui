@@ -53,7 +53,7 @@ def export_data():
             )
             all_secrets = data.get("secrets", [])
         except BarbicanError as exc:
-            flash(f"Failed to list secrets: {exc}", "danger")
+            flash(f"Failed to list secrets: {safe_error_message(exc)}", "danger")
             return redirect(url_for("transfer.index"))
 
         for s in all_secrets:
@@ -101,7 +101,7 @@ def export_data():
             )
             all_containers = data.get("containers", [])
         except BarbicanError as exc:
-            flash(f"Failed to list containers: {exc}", "danger")
+            flash(f"Failed to list containers: {safe_error_message(exc)}", "danger")
             return redirect(url_for("transfer.index"))
 
         for c in all_containers:
@@ -165,7 +165,7 @@ def import_data():
         content = file.read().decode("utf-8")
         data = json.loads(content)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        flash(f"Invalid JSON file: {exc}", "danger")
+        flash(f"Invalid JSON file: {safe_error_message(exc)}", "danger")
         return redirect(url_for("transfer.index"))
 
     if data.get("version") != "1.0":

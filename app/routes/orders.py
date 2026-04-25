@@ -25,7 +25,7 @@ def list_orders():
             limit=limit, offset=offset,
         )
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
         data = {"orders": [], "total": 0}
 
     orders = data.get("orders", [])
@@ -77,7 +77,7 @@ def create_order():
         flash("Order created.", "success")
         return redirect(url_for("orders.get_order", order_id=oid))
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
         return redirect(url_for("orders.create_order"))
 
 
@@ -91,7 +91,7 @@ def get_order(order_id: str):
             auth.barbican_endpoint, auth.token, auth.project_id, order_id
         )
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
         return redirect(url_for("orders.list_orders"))
 
     order["id"] = order_id
@@ -112,6 +112,6 @@ def delete_order(order_id: str):
         )
         flash("Order deleted.", "success")
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
     return redirect(url_for("orders.list_orders"))
 

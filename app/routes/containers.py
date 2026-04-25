@@ -25,7 +25,7 @@ def list_containers():
             limit=limit, offset=offset,
         )
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
         data = {"containers": [], "total": 0}
 
     containers = data.get("containers", [])
@@ -85,7 +85,7 @@ def create_container():
         flash("Container created.", "success")
         return redirect(url_for("containers.get_container", container_id=cid))
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
         return redirect(url_for("containers.create_container"))
 
 
@@ -99,7 +99,7 @@ def get_container(container_id: str):
             auth.barbican_endpoint, auth.token, auth.project_id, container_id
         )
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
         return redirect(url_for("containers.list_containers"))
 
     container["id"] = container_id
@@ -135,6 +135,6 @@ def delete_container(container_id: str):
         )
         flash("Container deleted.", "success")
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
     return redirect(url_for("containers.list_containers"))
 

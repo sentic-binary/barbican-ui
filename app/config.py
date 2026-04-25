@@ -47,9 +47,9 @@ class Config:
             os.environ.get("BARBICAN_ENDPOINT_AUTODISCOVERY", "true").lower() == "true"
         )
         cls.OS_BARBICAN_ENDPOINT = os.environ.get("OS_BARBICAN_ENDPOINT", "")
+        cls.OS_CACERT = os.environ.get("OS_CACERT", "")
         cls.SECRET_KEY = os.environ.get("SECRET_KEY", "change-me")
         try:
-            cls.SESSION_LIFETIME_SECONDS = int(os.environ.get("SESSION_LIFETIME_SECONDS", "3600"))
         except ValueError:
             cls.SESSION_LIFETIME_SECONDS = 3600
         cls.SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "true").lower() == "true"
@@ -66,14 +66,12 @@ class Config:
             cls.FLASK_PORT = 8080
 
     @classmethod
-    def validate(cls) -> None:
-        """Load from env and validate required configuration. Exits on failure."""
-        cls._load()
+    def tls_verify(cls) -> bool | str:
+        """Return the ``verify`` parameter for requests calls.
 
-        errors: list[str] = []
-
-        if not cls.OS_AUTH_URL:
-            errors.append("OS_AUTH_URL is required (e.g. https://keystone.example.com/v3)")
+        Returns the CA bundle path if OS_CACERT is set, otherwise True
+        (use system default CA bundle).
+        """
 
         if not cls.BARBICAN_ENDPOINT_AUTODISCOVERY and not cls.OS_BARBICAN_ENDPOINT:
             errors.append(
@@ -82,10 +80,20 @@ class Config:
             )
 
         if cls.SECRET_KEY == "change-me":
+        if cls.SECRET_KEY in ("change-me", "CHANGE-ME-TO-A-RANDOM-32-CHAR-STRING"):
+            errors.append(
+                "SECRET_KEY is set to the default value. "
+                "Set a strong random secret via environment variable "
+                "(e.g. python -c \"import secrets; print(secrets.token_hex(32))\")"
+            )
+
+        if not cls.OS_CACERT and cls.OS_AUTH_URL.startswith("https"):
             import warnings
             warnings.warn(
                 "SECRET_KEY is set to the default value. "
                 "Set a strong random secret for production use.",
+                "OS_CACERT is not set. Using system CA bundle for TLS verification. "
+                "Set OS_CACERT to a CA bundle path if using internal PKI.",
                 stacklevel=2,
             )
 

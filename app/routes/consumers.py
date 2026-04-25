@@ -30,7 +30,7 @@ def create_consumer(container_id: str):
         )
         flash("Consumer registered.", "success")
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
 
     return redirect(url_for("containers.get_container", container_id=container_id))
 
@@ -50,7 +50,7 @@ def delete_consumer(container_id: str):
         )
         flash("Consumer removed.", "success")
     except BarbicanError as exc:
-        flash(str(exc), "danger")
+        flash(safe_error_message(exc), "danger")
 
     return redirect(url_for("containers.get_container", container_id=container_id))
 
