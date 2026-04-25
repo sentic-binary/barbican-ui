@@ -14,6 +14,7 @@ from app.config import Config
 def create_app(testing: bool = False) -> Flask:
     """Create and configure the Flask application."""
     load_dotenv()
+    Config._load()
     Config.validate()
 
     app = Flask(

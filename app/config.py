@@ -50,6 +50,7 @@ class Config:
         cls.OS_CACERT = os.environ.get("OS_CACERT", "")
         cls.SECRET_KEY = os.environ.get("SECRET_KEY", "change-me")
         try:
+            cls.SESSION_LIFETIME_SECONDS = int(os.environ.get("SESSION_LIFETIME_SECONDS", "3600"))
         except ValueError:
             cls.SESSION_LIFETIME_SECONDS = 3600
         cls.SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "true").lower() == "true"
@@ -72,6 +73,12 @@ class Config:
         Returns the CA bundle path if OS_CACERT is set, otherwise True
         (use system default CA bundle).
         """
+        return cls.OS_CACERT if cls.OS_CACERT else True
+
+    @classmethod
+    def validate(cls) -> None:
+        """Validate configuration and exit if critical values are missing."""
+        errors: list[str] = []
 
         if not cls.BARBICAN_ENDPOINT_AUTODISCOVERY and not cls.OS_BARBICAN_ENDPOINT:
             errors.append(
@@ -79,7 +86,6 @@ class Config:
                 "BARBICAN_ENDPOINT_AUTODISCOVERY=false"
             )
 
-        if cls.SECRET_KEY == "change-me":
         if cls.SECRET_KEY in ("change-me", "CHANGE-ME-TO-A-RANDOM-32-CHAR-STRING"):
             errors.append(
                 "SECRET_KEY is set to the default value. "
@@ -90,8 +96,6 @@ class Config:
         if not cls.OS_CACERT and cls.OS_AUTH_URL.startswith("https"):
             import warnings
             warnings.warn(
-                "SECRET_KEY is set to the default value. "
-                "Set a strong random secret for production use.",
                 "OS_CACERT is not set. Using system CA bundle for TLS verification. "
                 "Set OS_CACERT to a CA bundle path if using internal PKI.",
                 stacklevel=2,

@@ -20,6 +20,7 @@ from typing import Any
 import requests
 
 from app.cache import cache_delete, cache_get, cache_invalidate_prefix, cache_set
+from app.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,11 @@ _TIMEOUT = 30
 
 
 def _verify() -> bool | str:
+    """Return the TLS verify parameter from Config."""
+    return Config.tls_verify()
+
+
+class BarbicanError(Exception):
     """Raised on Barbican API errors."""
 
     def __init__(self, message: str, status_code: int = 0):
