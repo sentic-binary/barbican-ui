@@ -5,18 +5,18 @@
 Barbican UI is a stateless Python/Flask web application that acts as a browser-based proxy to the OpenStack Barbican API. It authenticates users via Keystone and manages secrets, containers, orders, and consumers through Barbican's REST API.
 
 ```
-┌──────────────┐     ┌───────────────────┐     ┌──────────────┐
-│   Browser    │────▶│   Barbican UI     │────▶│   Keystone   │
-│              │◀────│   (Flask/Gunicorn) │     │   POST /v3/  │
-│              │     │                   │     │   auth/tokens │
-│              │     │   ┌───────────┐   │     └──────────────┘
-│              │     │   │ diskcache │   │
-│              │     │   └───────────┘   │     ┌──────────────┐
-│              │     │                   │────▶│   Barbican   │
-│              │     │                   │◀────│   /v1/secrets │
-└──────────────┘     └───────────────────┘     │   /v1/contai.│
-                                                │   /v1/orders │
-                                                └──────────────┘
+┌──────────────┐     ┌────────────────────┐     ┌────────────────┐
+│              │     │                    │     │    Keystone    │
+│   Browser    │────▶│    Barbican UI     │────▶│  POST /v3/     │
+│              │◀────│  (Flask/Gunicorn)  │     │  auth/tokens   │
+│              │     │                    │     └────────────────┘
+│              │     │   ┌────────────┐   │
+│              │     │   │  diskcache │   │     ┌────────────────┐
+│              │     │   └────────────┘   │     │    Barbican    │
+│              │     │                    │────▶│  /v1/secrets   │
+│              │     │                    │◀────│  /v1/containers│
+└──────────────┘     └────────────────────┘     │  /v1/orders    │
+                                                └────────────────┘
 ```
 
 ## Components
@@ -74,27 +74,27 @@ Jinja2 templates using Bootstrap 5 (CDN) and JSONEditor (CDN):
 ## Deployment
 
 ```
-┌─────────────────────────────────────────────┐
-│              Kubernetes Cluster              │
-│                                             │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐    │
-│  │  Pod 1  │  │  Pod 2  │  │  Pod N  │    │
-│  │ gunicorn│  │ gunicorn│  │ gunicorn│    │
-│  │ 4 workers│ │ 4 workers│ │ 4 workers│   │
-│  │ diskcache│ │ diskcache│ │ diskcache│   │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘   │
-│       │             │             │          │
-│  ┌────▼─────────────▼─────────────▼────┐    │
-│  │           Service (ClusterIP)       │    │
-│  └────────────────┬────────────────────┘    │
-│                   │                          │
-│  ┌────────────────▼────────────────────┐    │
-│  │     Ingress (optional, nginx)       │    │
-│  └─────────────────────────────────────┘    │
-│                                             │
-│  ConfigMap: non-sensitive env vars          │
-│  Secret: SECRET_KEY                         │
-│  HPA: 2–10 replicas, 70% CPU target        │
-└─────────────────────────────────────────────┘
+┌───────────────────────────────────────────────┐
+│               Kubernetes Cluster              │
+│                                               │
+│  ┌───────────┐  ┌───────────┐  ┌───────────┐  │
+│  │   Pod 1   │  │   Pod 2   │  │   Pod N   │  │
+│  │ gunicorn  │  │ gunicorn  │  │ gunicorn  │  │
+│  │ 4 workers │  │ 4 workers │  │ 4 workers │  │
+│  │ diskcache │  │ diskcache │  │ diskcache │  │
+│  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘  │
+│        │              │              │        │
+│  ┌─────▼──────────────▼──────────────▼──────┐ │
+│  │           Service (ClusterIP)            │ │
+│  └────────────────────┬─────────────────────┘ │
+│                       │                       │
+│  ┌────────────────────▼─────────────────────┐ │
+│  │        Ingress (optional, nginx)         │ │
+│  └──────────────────────────────────────────┘ │
+│                                               │
+│  ConfigMap: non-sensitive env vars            │
+│  Secret: SECRET_KEY                           │
+│  HPA: 2–10 replicas, 70% CPU target           │
+└───────────────────────────────────────────────┘
 ```
 
