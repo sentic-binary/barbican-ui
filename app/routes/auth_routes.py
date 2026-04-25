@@ -64,8 +64,7 @@ def login():
             project_name = tenant_value
 
     # Override region for this session if provided
-    if region:
-        Config.OS_REGION_NAME = region
+    effective_region = region or Config.OS_REGION_NAME
 
     try:
         token = authenticate(
@@ -75,6 +74,7 @@ def login():
             project_id=project_id,
             user_domain_name=user_domain,
             project_domain_name=project_domain,
+            region=effective_region,
         )
     except AuthError as exc:
         flash(str(exc), "danger")

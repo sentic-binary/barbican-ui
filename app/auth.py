@@ -50,6 +50,7 @@ def authenticate(
     project_id: str = "",
     user_domain_name: str = "",
     project_domain_name: str = "",
+    region: str = "",
 ) -> AuthToken:
     """Authenticate against Keystone v3 and return an AuthToken.
 
@@ -119,7 +120,8 @@ def authenticate(
         expires_at = datetime.now(timezone.utc)
 
     catalog = data.get("catalog", [])
-    barbican_endpoint = _resolve_barbican_endpoint(catalog)
+    effective_region = region or Config.OS_REGION_NAME
+    barbican_endpoint = _resolve_barbican_endpoint(catalog, effective_region)
 
     project = data.get("project", {})
 
@@ -135,7 +137,7 @@ def authenticate(
     )
 
 
-def _resolve_barbican_endpoint(catalog: list[dict[str, Any]]) -> str:
+def _resolve_barbican_endpoint(catalog: list[dict[str, Any]], region: str = "") -> str:
     """Determine the Barbican endpoint to use.
 
     Priority:
@@ -149,15 +151,26 @@ def _resolve_barbican_endpoint(catalog: list[dict[str, Any]]) -> str:
 
     # 2. Autodiscovery
     if Config.BARBICAN_ENDPOINT_AUTODISCOVERY:
-        region = Config.OS_REGION_NAME
         for svc in catalog:
             if svc.get("type") == "key-manager":
+                # First pass: match by region if specified
+                if region:
+                    for ep in svc.get("endpoints", []):
+                        if ep.get("interface") == "public":
+                            if ep.get("region") == region or ep.get("region_id") == region:
+                                url = ep.get("url", "").rstrip("/")
+                                logger.info("Barbican endpoint discovered (region=%s): %s", region, url)
+                                return url
+                    logger.warning("No key-manager endpoint in region '%s', falling back to first public endpoint", region)
+
+                # Second pass (or no region): take first public endpoint
                 for ep in svc.get("endpoints", []):
                     if ep.get("interface") == "public":
-                        if not region or ep.get("region") == region or ep.get("region_id") == region:
-                            url = ep.get("url", "").rstrip("/")
-                            logger.info("Barbican endpoint discovered: %s", url)
-                            return url
+                        url = ep.get("url", "").rstrip("/")
+                        ep_region = ep.get("region") or ep.get("region_id") or "unknown"
+                        logger.info("Barbican endpoint discovered (region=%s): %s", ep_region, url)
+                        return url
+
         logger.warning("key-manager service not found in catalog")
 
     return ""
