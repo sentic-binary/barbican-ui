@@ -56,6 +56,10 @@ flask --app app:create_app run --port 8080 --debug
 ### Docker
 
 ```bash
+# From GHCR (recommended)
+docker run -p 8080:8080 --env-file .env ghcr.io/sentic-binary/barbican-ui:latest
+
+# Or build locally
 docker build -t barbican-ui:latest .
 docker run -p 8080:8080 --env-file .env barbican-ui:latest
 ```
@@ -70,7 +74,16 @@ docker-compose up -d
 ### Helm (Kubernetes)
 
 ```bash
+# Install from GHCR OCI registry
+helm install barbican-ui oci://ghcr.io/sentic-binary/charts/barbican-ui \
+  --version 1.0.0 \
+  --set config.OS_AUTH_URL=https://keystone.example.com/v3 \
+  --set config.OS_REGION_NAME=RegionOne \
+  --set secrets.SECRET_KEY=$(openssl rand -hex 32)
+
+# Or from local checkout
 helm install barbican-ui ./helm/barbican-ui \
+  --set image.tag=1.0.0 \
   --set config.OS_AUTH_URL=https://keystone.example.com/v3 \
   --set config.OS_REGION_NAME=RegionOne \
   --set secrets.SECRET_KEY=$(openssl rand -hex 32)
@@ -179,6 +192,50 @@ pytest
 - [Deployment](docs/deployment.md) — Docker, Compose, Helm with production checklist
 - [API Coverage](docs/api-coverage.md) — mapping of all 16 CLI commands to UI locations
 - **In-app Docs tab** — accessible after login, explains all Barbican concepts
+
+## Releasing & Versioning
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) and [Release Please](https://github.com/googleapis/release-please) for fully automated releases.
+
+### How it works
+
+1. You write commits using conventional prefixes (see table below).
+2. On every push to `main`, **Release Please** analyses new commits and opens (or updates) a PR titled _"chore: release vX.Y.Z"_ containing:
+   - Updated `CHANGELOG.md`
+   - Version bump in `version.txt`
+3. When you **merge** that PR, Release Please creates a **git tag** `vX.Y.Z`.
+4. The tag triggers the **Release workflow** which:
+   - Runs tests (gate)
+   - Builds & pushes a Docker image to `ghcr.io/sentic-binary/barbican-ui:X.Y.Z` + `:latest`
+   - Packages & pushes the Helm chart to `oci://ghcr.io/sentic-binary/charts/barbican-ui:X.Y.Z`
+   - Creates a GitHub Release with auto-generated notes
+
+### Conventional Commits → version bumps
+
+| Commit prefix | Version bump | Example |
+|---|---|---|
+| `fix:` | **patch** (0.0.X) | `fix: handle empty secret payload` |
+| `feat:` | **minor** (0.X.0) | `feat: add secret rotation support` |
+| `feat!:` or `BREAKING CHANGE:` in footer | **major** (X.0.0) | `feat!: remove v1 API compatibility` |
+| `docs:`, `chore:`, `ci:`, `style:`, `refactor:`, `test:` | no release | `docs: update deployment guide` |
+
+### Manual release (optional)
+
+If you want to release without Release Please, create and push a tag manually:
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+### Artifacts
+
+| Artifact | Location |
+|---|---|
+| Docker image | `ghcr.io/sentic-binary/barbican-ui:<version>` |
+| Docker image (latest) | `ghcr.io/sentic-binary/barbican-ui:latest` |
+| Helm chart (OCI) | `oci://ghcr.io/sentic-binary/charts/barbican-ui` |
+| GitHub Release | [Releases page](../../releases) |
 
 ## License
 

@@ -1,0 +1,23 @@
+name: Release Please
+
+on:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          release-type: simple
+          # release-please will:
+          # 1. Analyse conventional commits since last release
+          # 2. Open/update a PR with CHANGELOG.md + version bump
+          # 3. When that PR is merged, create a git tag (v*) + GitHub Release
+          # 4. The git tag triggers .github/workflows/release.yml
+
