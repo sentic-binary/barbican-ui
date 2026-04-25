@@ -113,6 +113,32 @@ staging/database/mysql-password       →  📁 staging / 📁 database / 🔑 m
 - **Path field** when creating secrets, with autocomplete of existing paths
 - **Search** works across all folders
 
+## Export / Import (Transfer)
+
+Migrate secrets and containers between Barbican instances, regions, or projects.
+
+**Export** downloads all resources as a versioned JSON file:
+- Secrets with metadata and (optionally) plaintext payloads
+- Containers with secret references resolved by name
+- Consumers registered on containers
+
+**Import** recreates resources from a previously exported file:
+- **Skip existing** — skips secrets that already exist (matched by name)
+- **Dry run** — preview what would be imported without creating anything
+- Secrets are created first, then containers reference them by name → new ID
+- Consumers are re-registered on the newly created containers
+
+```
+Instance A (region WAW)          Instance B (region GRA)
+┌──────────────┐   JSON file   ┌──────────────┐
+│  Secrets     │──── Export ──▶│              │
+│  Containers  │               │  Import ───▶ │ Secrets
+│  Consumers   │               │              │ Containers
+└──────────────┘               └──────────────┘
+```
+
+> ⚠️ **Security:** Exported files contain plaintext secret values. Handle them with the same care as the secrets themselves.
+
 ## Security
 
 | Feature | Description |

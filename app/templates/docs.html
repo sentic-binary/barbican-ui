@@ -16,6 +16,7 @@
         <a class="nav-link" href="#containers"><i class="bi bi-archive"></i> Containers</a>
         <a class="nav-link" href="#consumers"><i class="bi bi-people"></i> Consumers</a>
         <a class="nav-link" href="#orders"><i class="bi bi-cart"></i> Orders</a>
+        <a class="nav-link" href="#transfer"><i class="bi bi-arrow-left-right"></i> Export / Import</a>
         <a class="nav-link" href="#permissions"><i class="bi bi-shield-check"></i> Permissions</a>
         <a class="nav-link" href="#cli-mapping"><i class="bi bi-terminal"></i> CLI Mapping</a>
       </nav>
@@ -334,6 +335,101 @@
           <tr><td>You need an RSA key pair</td><td><strong>Order (asymmetric)</strong> — generates both keys at once</td></tr>
         </tbody>
       </table>
+    </section>
+
+    {# ── Transfer ───────────────────────────────────────────────── #}
+    <section id="transfer" class="mb-5">
+      <h2><i class="bi bi-arrow-left-right"></i> Export / Import (Transfer)</h2>
+      <hr>
+      <p>
+        The <a href="/transfer">Transfer</a> page lets you migrate secrets and containers between
+        Barbican instances, regions, or projects — by exporting to a JSON file and importing it elsewhere.
+      </p>
+
+      <h5>Export</h5>
+      <p>Downloads a JSON file containing:</p>
+      <ul>
+        <li><strong>Secrets</strong> — name, type, algorithm, metadata, and optionally the plaintext payload</li>
+        <li><strong>Containers</strong> — name, type, and secret references (resolved by secret <em>name</em>, not ID)</li>
+        <li><strong>Consumers</strong> — name and URL for each consumer registered on a container</li>
+      </ul>
+      <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Security:</strong> If you include payloads, the exported file contains <strong>plaintext
+        secret values</strong>. Treat the file with the same care as the secrets themselves. Do not commit
+        it to version control or share it over insecure channels.
+      </div>
+
+      <h5>Import</h5>
+      <p>Uploads a previously exported JSON file and recreates the resources:</p>
+      <div class="card mb-3">
+        <div class="card-body">
+          <ol class="mb-0">
+            <li><strong>Secrets</strong> are created first</li>
+            <li><strong>Containers</strong> are created next — secret references are resolved by matching
+                the secret <em>name</em> to the newly created secret's ID</li>
+            <li><strong>Consumers</strong> are re-registered on the new containers</li>
+          </ol>
+        </div>
+      </div>
+
+      <h5>Options</h5>
+      <table class="table table-sm">
+        <thead><tr><th>Option</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Skip existing</strong></td>
+            <td>If a secret with the same name already exists in the target instance, it is skipped
+                (not overwritten). The existing secret's ID is used for container references. Enabled by default.</td>
+          </tr>
+          <tr>
+            <td><strong>Dry run</strong></td>
+            <td>Simulates the import and reports what <em>would</em> be created, without actually
+                creating anything. Use this to preview before committing.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h5>Use Cases</h5>
+      <table class="table table-sm">
+        <thead><tr><th>Scenario</th><th>How</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Migrate secrets from region A to region B</td>
+            <td>Log in to region A → Export → Log out → Log in to region B → Import</td>
+          </tr>
+          <tr>
+            <td>Backup all secrets</td>
+            <td>Export with payloads → store the JSON file securely</td>
+          </tr>
+          <tr>
+            <td>Clone secrets to a staging project</td>
+            <td>Export from production project → Log in to staging project → Import with "skip existing"</td>
+          </tr>
+          <tr>
+            <td>Audit secret inventory</td>
+            <td>Export without payloads → review the JSON metadata</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h5>File Format</h5>
+      <p>The export file is a versioned JSON document (<code>"version": "1.0"</code>) containing:</p>
+      <ul>
+        <li><code>exported_at</code> — timestamp of the export</li>
+        <li><code>source_endpoint</code> — the Barbican API URL it was exported from</li>
+        <li><code>project_id</code> / <code>project_name</code> — source project info</li>
+        <li><code>secrets[]</code> — array of secret objects with optional <code>payload</code> field</li>
+        <li><code>containers[]</code> — array of containers with <code>secret_refs</code> using secret names (not UUIDs)
+            and <code>consumers</code> array</li>
+      </ul>
+
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        <strong>Why names instead of IDs?</strong> Secret UUIDs are unique per Barbican instance.
+        When importing into a different instance, new UUIDs are generated. By referencing secrets
+        by name, container relationships are preserved across instances.
+      </div>
     </section>
 
     {# ── Permissions ───────────────────────────────────────────── #}

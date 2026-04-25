@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Export / Import — Barbican UI{% endblock %}
+{% block content %}
+
+<h2><i class="bi bi-arrow-left-right"></i> Export / Import</h2>
+<p class="text-muted">Migrate secrets and containers between Barbican instances or regions.</p>
+<hr>
+
+<div class="row g-4">
+
+  {# ── Export ────────────────────────────────────────────────── #}
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header bg-primary text-white">
+        <i class="bi bi-download"></i> <strong>Export</strong>
+      </div>
+      <div class="card-body">
+        <p>Download all resources from the current Barbican instance as a JSON file.</p>
+
+        <form method="POST" action="/transfer/export">
+          <h6>Include:</h6>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="include" value="secrets" id="expSecrets" checked>
+            <label class="form-check-label" for="expSecrets">
+              <i class="bi bi-key"></i> Secrets (metadata)
+            </label>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="include" value="payloads" id="expPayloads" checked>
+            <label class="form-check-label" for="expPayloads">
+              <i class="bi bi-file-earmark-lock"></i> Secret payloads (values)
+              <br><small class="text-muted">Required for re-importing secrets with their actual data. Fetches each secret's payload individually.</small>
+            </label>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="include" value="containers" id="expContainers" checked>
+            <label class="form-check-label" for="expContainers">
+              <i class="bi bi-archive"></i> Containers (with consumers)
+              <br><small class="text-muted">Container references are stored by secret name, so secrets must also be included.</small>
+            </label>
+          </div>
+
+          <div class="alert alert-warning small">
+            <i class="bi bi-exclamation-triangle"></i>
+            <strong>Security notice:</strong> The exported file will contain <strong>plaintext secret values</strong>
+            if payloads are included. Handle the file with the same care as the secrets themselves.
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-download"></i> Export to JSON
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# ── Import ────────────────────────────────────────────────── #}
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header bg-success text-white">
+        <i class="bi bi-upload"></i> <strong>Import</strong>
+      </div>
+      <div class="card-body">
+        <p>Upload a previously exported JSON file to recreate resources in this Barbican instance.</p>
+
+        <form method="POST" action="/transfer/import" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label class="form-label">JSON file</label>
+            <input type="file" name="file" class="form-control" accept=".json" required>
+          </div>
+
+          <h6>Options:</h6>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="skip_existing" id="impSkip" checked>
+            <label class="form-check-label" for="impSkip">
+              Skip secrets that already exist (match by name)
+            </label>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="dry_run" id="impDry">
+            <label class="form-check-label" for="impDry">
+              <strong>Dry run</strong> — preview what would be imported without creating anything
+            </label>
+          </div>
+
+          <div class="alert alert-info small">
+            <i class="bi bi-info-circle"></i>
+            <strong>How it works:</strong>
+            <ol class="mb-0 mt-1">
+              <li>Secrets are created first (matched by name for container references)</li>
+              <li>Containers are created with references to the newly created secrets</li>
+              <li>Consumers are re-registered on the new containers</li>
+            </ol>
+          </div>
+
+          <div class="alert alert-secondary small">
+            <i class="bi bi-lightbulb"></i>
+            <strong>Tip:</strong> Use <strong>Dry run</strong> first to preview the import,
+            then uncheck it and import for real.
+          </div>
+
+          <button type="submit" class="btn btn-success w-100"
+                  onclick="return confirm('Import resources into this Barbican instance?')">
+            <i class="bi bi-upload"></i> Import from JSON
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Export format documentation ─────────────────────────────── #}
+<div class="card mt-4">
+  <div class="card-header">
+    <i class="bi bi-file-earmark-code"></i> Export file format
+  </div>
+  <div class="card-body">
+    <pre class="bg-dark text-light p-3 rounded small mb-0"><code>{
+  "version": "1.0",
+  "exported_at": "2026-04-25T12:00:00+00:00",
+  "source_endpoint": "https://key-manager.regionone.example.com",
+  "project_id": "abc123...",
+  "project_name": "my-project",
+  "secrets": [
+    {
+      "name": "production/database/password",
+      "secret_type": "opaque",
+      "algorithm": null,
+      "payload": "s3cret-value",
+      "payload_content_type": "text/plain"
+    }
+  ],
+  "containers": [
+    {
+      "name": "tls-bundle",
+      "type": "certificate",
+      "secret_refs": [
+        {"name": "certificate", "secret_name": "production/tls/cert"},
+        {"name": "private_key", "secret_name": "production/tls/key"}
+      ],
+      "consumers": [
+        {"name": "load-balancer", "url": "https://lb.example.com"}
+      ]
+    }
+  ]
+}</code></pre>
+  </div>
+</div>
+
+{% endblock %}
+
