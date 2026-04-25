@@ -46,7 +46,7 @@ def test_full_secret_lifecycle(client):
 
     # Login
     resp = client.post("/login", data={
-        "username": "admin", "password": "pass", "project_name": "proj",
+        "username": "admin", "password": "pass", "tenant_value": "proj", "tenant_type": "name",
     }, follow_redirects=False)
     assert resp.status_code == 302
 
@@ -104,7 +104,7 @@ def test_full_container_lifecycle(client):
 
     # Login
     client.post("/login", data={
-        "username": "admin", "password": "pass", "project_name": "proj",
+        "username": "admin", "password": "pass", "tenant_value": "proj", "tenant_type": "name",
     })
 
     # Create container
@@ -162,7 +162,7 @@ def test_full_order_lifecycle(client):
     """Login → create order → get → delete."""
     _mock_keystone_auth()
     client.post("/login", data={
-        "username": "admin", "password": "pass", "project_name": "proj",
+        "username": "admin", "password": "pass", "tenant_value": "proj", "tenant_type": "name",
     })
 
     # Create

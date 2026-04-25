@@ -37,8 +37,8 @@ def test_login_success(client):
         status=201,
     )
     resp = client.post("/login", data={
-        "username": "testuser", "password": "pass", "project_name": "proj",
-        "user_domain_name": "Default", "project_domain_name": "Default",
+        "username": "testuser", "password": "pass", "tenant_value": "proj",
+        "tenant_type": "name", "user_domain_name": "Default", "project_domain_name": "Default",
     }, follow_redirects=False)
     assert resp.status_code == 302
     assert "/secrets" in resp.headers["Location"]
@@ -53,7 +53,7 @@ def test_login_failure(client):
         status=401,
     )
     resp = client.post("/login", data={
-        "username": "bad", "password": "bad", "project_name": "proj",
+        "username": "bad", "password": "bad", "tenant_value": "proj", "tenant_type": "name",
     }, follow_redirects=False)
     assert resp.status_code == 302
     assert "/login" in resp.headers["Location"]
