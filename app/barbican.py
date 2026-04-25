@@ -27,17 +27,17 @@ logger = logging.getLogger(__name__)
 _TIMEOUT = 30
 
 
-def _verify() -> bool | str:
-    """Return the TLS verify parameter from Config."""
-    return Config.tls_verify()
-
-
 class BarbicanError(Exception):
     """Raised on Barbican API errors."""
 
     def __init__(self, message: str, status_code: int = 0):
         super().__init__(message)
         self.status_code = status_code
+
+
+def _verify() -> bool | str:
+    """Return TLS verify parameter from Config."""
+    return Config.tls_verify()
 
 
 def _headers(token: str, content_type: str = "application/json") -> dict[str, str]:
@@ -485,4 +485,3 @@ def order_delete(
     )
     _check(resp, (200, 204))
     cache_invalidate_prefix(_cache_key(project_id, "orders"))
-

@@ -93,6 +93,15 @@ def validate_resource_id(resource_id: str) -> str:
     return resource_id
 
 
+def safe_error_message(exc: Exception) -> str:
+    """Return a safe error message string, stripping sensitive details."""
+    msg = str(exc)
+    # Truncate overly long messages
+    if len(msg) > 300:
+        msg = msg[:300] + "…"
+    return msg
+
+
 def safe_int(value: str, default: int = 1, minimum: int = 1) -> int:
     """Safely parse an integer from a string, returning default on failure."""
     try:

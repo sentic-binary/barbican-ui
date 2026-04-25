@@ -31,7 +31,15 @@ def _is_rate_limited(ip: str) -> bool:
     attempts = _login_attempts[ip]
     # Prune old entries
     _login_attempts[ip] = [t for t in attempts if now - t < _RATE_LIMIT_WINDOW]
-    return len(_login_attempts[ip]) >= _RATE_LIMIT_MAX
+    if not _login_attempts[ip]:
+        del _login_attempts[ip]
+        return False
+    # Prevent unbounded growth: evict stale IPs periodically
+    if len(_login_attempts) > 10000:
+        stale = [k for k, v in _login_attempts.items() if not v or now - v[-1] > _RATE_LIMIT_WINDOW]
+        for k in stale:
+            del _login_attempts[k]
+    return len(_login_attempts.get(ip, [])) >= _RATE_LIMIT_MAX
 
 
 def _record_attempt(ip: str) -> None:

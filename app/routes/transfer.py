@@ -10,7 +10,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for,
 
 from app import barbican
 from app.barbican import BarbicanError
-from app.routes.helpers import get_auth, login_required, _extract_id
+from app.routes.helpers import get_auth, login_required, _extract_id, safe_error_message
 
 transfer_bp = Blueprint("transfer", __name__, url_prefix="/transfer")
 logger = logging.getLogger(__name__)

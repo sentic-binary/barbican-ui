@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import zlib
 
 import diskcache
 
@@ -13,11 +15,32 @@ logger = logging.getLogger(__name__)
 _cache: diskcache.Cache | None = None
 
 
+class _JSONDisk(diskcache.Disk):
+    """Custom disk serializer using JSON instead of pickle to avoid
+    arbitrary code execution via CVE-2025-69872."""
+
+    def store(self, value, read, key=diskcache.UNKNOWN):
+        if not read:
+            value = zlib.compress(json.dumps(value).encode("utf-8"))
+        return super().store(value, read, key=key)
+
+    def fetch(self, mode, filename, value, read):
+        data = super().fetch(mode, filename, value, read)
+        if not read and isinstance(data, bytes):
+            data = json.loads(zlib.decompress(data).decode("utf-8"))
+        return data
+
+
 def get_cache() -> diskcache.Cache:
     global _cache
     if _cache is None:
-        _cache = diskcache.Cache(Config.CACHE_DIR, eviction_policy="least-recently-used")
+        _cache = diskcache.Cache(
+            Config.CACHE_DIR,
+            eviction_policy="least-recently-used",
+            disk=_JSONDisk,
+        )
         logger.info("Cache initialised at %s", Config.CACHE_DIR)
+    return _cache
     return _cache
 
 

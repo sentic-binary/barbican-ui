@@ -7,7 +7,7 @@ services:
     env_file:
       - .env
     environment:
-      - LOG_LEVEL=DEBUG
+      - LOG_LEVEL=INFO
     volumes:
       - cache-data:/tmp/barbican-ui-cache
     restart: unless-stopped

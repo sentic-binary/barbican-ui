@@ -96,6 +96,7 @@ def authenticate(
             json=body,
             headers={"Content-Type": "application/json"},
             timeout=30,
+            verify=Config.tls_verify(),
         )
     except requests.RequestException as exc:
         logger.error("Keystone connection error: %s", exc)

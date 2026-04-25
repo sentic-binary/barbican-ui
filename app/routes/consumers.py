@@ -6,7 +6,7 @@ from flask import Blueprint, flash, redirect, request, url_for
 
 from app import barbican
 from app.barbican import BarbicanError
-from app.routes.helpers import get_auth, login_required, validate_resource_id
+from app.routes.helpers import get_auth, login_required, validate_resource_id, safe_error_message
 
 consumers_bp = Blueprint("consumers", __name__, url_prefix="/consumers")
 

@@ -9,7 +9,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app import barbican
 from app.barbican import BarbicanError
-from app.routes.helpers import get_auth, login_required, _extract_id, validate_resource_id
+from app.routes.helpers import get_auth, login_required, _extract_id, validate_resource_id, safe_error_message
 
 secrets_bp = Blueprint("secrets", __name__, url_prefix="/secrets")
 

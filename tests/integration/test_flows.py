@@ -16,10 +16,6 @@ def clear_cache():
 
 KEYSTONE = "http://keystone.test/v3"
 BARBICAN = "http://barbican.test"
-SECRET_ID = "aaaa-bbbb-cccc-dddd"
-CONTAINER_ID = "cccc-dddd-eeee-ffff"
-ORDER_ID = "oooo-pppp-qqqq-rrrr"
-GEN_SECRET_ID = "gggg-hhhh-iiii-jjjj"
 
 
 def _mock_keystone_auth():
@@ -143,14 +139,14 @@ def test_full_container_lifecycle(client):
         responses.POST, f"{BARBICAN}/v1/containers/{CONTAINER_ID}/consumers",
         json={"name": "myapp", "URL": "http://myapp.example.com"}, status=200,
     )
-    resp = client.post(f"/consumers/{CONTAINER_ID}/create", data={
+    resp = client.post("/consumers/int-c1/create", data={
         "name": "myapp", "url": "http://myapp.example.com",
     }, follow_redirects=False)
     assert resp.status_code == 302
 
     # Delete consumer
     responses.add(responses.DELETE, f"{BARBICAN}/v1/containers/{CONTAINER_ID}/consumers", status=204)
-    resp = client.post(f"/consumers/{CONTAINER_ID}/delete", data={
+    resp = client.post("/consumers/int-c1/delete", data={
         "name": "myapp", "url": "http://myapp.example.com",
     }, follow_redirects=False)
     assert resp.status_code == 302
@@ -188,11 +184,11 @@ def test_full_order_lifecycle(client):
               "created": "2026-01-01", "updated": None, "order_ref": f"{BARBICAN}/v1/orders/{ORDER_ID}",
               "secret_ref": f"{BARBICAN}/v1/secrets/{GEN_SECRET_ID}"},
     )
-    resp = client.get(f"/orders/{ORDER_ID}")
+    resp = client.get("/orders/{ORDER_ID}")
     assert resp.status_code == 200
 
     # Delete
     responses.add(responses.DELETE, f"{BARBICAN}/v1/orders/{ORDER_ID}", status=204)
-    resp = client.post(f"/orders/{ORDER_ID}/delete", follow_redirects=False)
+    resp = client.post("/orders/{ORDER_ID}/delete", follow_redirects=False)
     assert resp.status_code == 302
 
