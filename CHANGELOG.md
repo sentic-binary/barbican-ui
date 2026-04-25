@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/sentic-binary/barbican-ui/compare/v1.1.0...v1.2.0) (2026-04-25)
+
+
+### Features
+
+* dot ([2b28cac](https://github.com/sentic-binary/barbican-ui/commit/2b28cac742e4a3d8f3529470d02641f6d847615f))
+
 ## [1.1.0](https://github.com/sentic-binary/barbican-ui/compare/v1.0.0...v1.1.0) (2026-04-25)
 
 
