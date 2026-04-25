@@ -49,12 +49,12 @@
             <label class="form-label">
               Region
               <a href="#" tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus"
-                 data-bs-content="OpenStack regions represent separate geographic deployments of cloud services. The region determines which API endpoints are used. Common examples: RegionOne, RegionTwo, RegionThree, UK1."
+                 data-bs-content="OpenStack regions represent separate geographic deployments of cloud services. The region determines which API endpoints are used. Common examples: RegionOne, us-east-1, eu-west-1."
                  class="text-muted"><i class="bi bi-info-circle"></i></a>
             </label>
             <input type="text" name="region" class="form-control"
                    value="{{ default_region }}"
-                   placeholder="e.g. RegionOne, RegionTwo, RegionThree (optional)">
+                   placeholder="e.g. RegionOne, us-east-1 (optional)">
           </div>
 
           <details class="mb-3">
@@ -64,7 +64,7 @@
                 <label class="form-label">
                   User Domain
                   <a href="#" tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus"
-                     data-bs-content="The domain that your user account belongs to. In OpenStack, domains are top-level containers for projects and users. Most cloud providers use 'Default'. your cloud provider also uses 'Default'. Only change this if your administrator has set up custom domains."
+                     data-bs-content="The domain that your user account belongs to. In OpenStack, domains are top-level containers for projects and users. Most cloud providers use 'Default'. Only change this if your administrator has set up custom domains."
                      class="text-muted"><i class="bi bi-info-circle"></i></a>
                 </label>
                 <input type="text" name="user_domain_name" class="form-control"

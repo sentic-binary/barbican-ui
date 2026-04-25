@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+{% block title %}Documentation — Barbican UI{% endblock %}
+{% block content %}
+
+<div class="row">
+  {# Sidebar navigation #}
+  <div class="col-md-3">
+    <div class="position-sticky" style="top:80px">
+      <h6 class="text-muted text-uppercase small">Contents</h6>
+      <nav class="nav flex-column nav-pills">
+        <a class="nav-link" href="#overview"><i class="bi bi-info-circle"></i> Overview</a>
+        <a class="nav-link" href="#secrets"><i class="bi bi-key"></i> Secrets</a>
+        <a class="nav-link" href="#secret-types"><i class="bi bi-tags"></i> Secret Types</a>
+        <a class="nav-link" href="#virtual-folders"><i class="bi bi-folder"></i> Virtual Folders</a>
+        <a class="nav-link" href="#payload-modes"><i class="bi bi-braces"></i> Payload Modes</a>
+        <a class="nav-link" href="#containers"><i class="bi bi-archive"></i> Containers</a>
+        <a class="nav-link" href="#consumers"><i class="bi bi-people"></i> Consumers</a>
+        <a class="nav-link" href="#orders"><i class="bi bi-cart"></i> Orders</a>
+        <a class="nav-link" href="#permissions"><i class="bi bi-shield-check"></i> Permissions</a>
+        <a class="nav-link" href="#cli-mapping"><i class="bi bi-terminal"></i> CLI Mapping</a>
+      </nav>
+    </div>
+  </div>
+
+  {# Content #}
+  <div class="col-md-9">
+
+    {# ── Overview ──────────────────────────────────────────────── #}
+    <section id="overview" class="mb-5">
+      <h2><i class="bi bi-info-circle"></i> Overview</h2>
+      <hr>
+      <p>
+        <strong>OpenStack Barbican</strong> is the <strong>key manager service</strong> for OpenStack.
+        It provides secure storage, provisioning, and management of secrets such as passwords, API keys,
+        encryption keys, and X.509 certificates.
+      </p>
+      <p>
+        This UI provides a browser-based interface covering all Barbican operations that the
+        <code>openstack secret</code> CLI offers. Think of it as a web-based equivalent of the CLI,
+        with additional features like a graphical JSON editor for structured secrets.
+      </p>
+      <div class="alert alert-info">
+        <i class="bi bi-lightbulb"></i>
+        <strong>Key principle:</strong> Barbican stores secrets server-side. This UI never persists
+        secrets locally — everything is fetched from and stored via the Barbican API. The only local
+        storage is a disk-based cache of metadata to reduce API calls.
+      </div>
+    </section>
+
+    {# ── Secrets ───────────────────────────────────────────────── #}
+    <section id="secrets" class="mb-5">
+      <h2><i class="bi bi-key"></i> Secrets</h2>
+      <hr>
+      <p>
+        A <strong>secret</strong> is the fundamental resource in Barbican. It can hold any sensitive data:
+        passwords, API tokens, SSH keys, certificates, encryption keys, or arbitrary binary data.
+      </p>
+
+      <h5>Secret Lifecycle</h5>
+      <div class="card mb-3">
+        <div class="card-body">
+          <ol class="mb-0">
+            <li><strong>Store</strong> — create a new secret with a name and payload</li>
+            <li><strong>Get</strong> — retrieve the secret's metadata and/or its payload</li>
+            <li><strong>Update</strong> — set or replace the payload (only if the secret was created without one)</li>
+            <li><strong>Delete</strong> — permanently remove the secret</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Important:</strong> Once a secret's payload is set, it <strong>cannot be changed</strong>.
+        The "update" operation in Barbican only works on secrets that were created <em>without</em> a payload
+        (two-step creation). To change a secret's value, you must delete it and create a new one.
+      </div>
+
+      <h5>Metadata Fields</h5>
+      <table class="table table-sm">
+        <thead><tr><th>Field</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>name</code></td><td>Human-readable name. Use <code>/</code> separators for virtual folder organization (e.g. <code>production/db/password</code>).</td></tr>
+          <tr><td><code>secret_type</code></td><td>Cryptographic classification. See <a href="#secret-types">Secret Types</a>.</td></tr>
+          <tr><td><code>algorithm</code></td><td>Algorithm used (e.g. <code>aes</code>, <code>rsa</code>). Informational only.</td></tr>
+          <tr><td><code>bit_length</code></td><td>Key size in bits (e.g. <code>256</code>). Informational only.</td></tr>
+          <tr><td><code>mode</code></td><td>Encryption mode (e.g. <code>cbc</code>). Informational only.</td></tr>
+          <tr><td><code>expiration</code></td><td>ISO 8601 timestamp after which Barbican may auto-delete the secret.</td></tr>
+          <tr><td><code>status</code></td><td><span class="badge bg-success">ACTIVE</span> (has payload) or <span class="badge bg-secondary">PENDING</span> (no payload yet).</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    {# ── Secret Types ──────────────────────────────────────────── #}
+    <section id="secret-types" class="mb-5">
+      <h2><i class="bi bi-tags"></i> Secret Types</h2>
+      <hr>
+      <p>Barbican classifies secrets by their intended cryptographic purpose:</p>
+      <table class="table table-sm table-hover">
+        <thead class="table-dark"><tr><th>Type</th><th>Use Case</th><th>Examples</th></tr></thead>
+        <tbody>
+          <tr><td><code>opaque</code></td><td>General purpose — any arbitrary data</td><td>Passwords, API keys, config files, JSON blobs</td></tr>
+          <tr><td><code>symmetric</code></td><td>Symmetric encryption keys</td><td>AES-256 key, HMAC key</td></tr>
+          <tr><td><code>public</code></td><td>Public key of an asymmetric pair</td><td>RSA public key, EC public key</td></tr>
+          <tr><td><code>private</code></td><td>Private key of an asymmetric pair</td><td>RSA private key, EC private key</td></tr>
+          <tr><td><code>passphrase</code></td><td>Passphrase for key protection</td><td>Private key passphrase</td></tr>
+          <tr><td><code>certificate</code></td><td>X.509 certificate</td><td>TLS/SSL certificates</td></tr>
+        </tbody>
+      </table>
+      <div class="alert alert-secondary">
+        <i class="bi bi-info-circle"></i>
+        For most use cases (passwords, API keys, JSON configs), use <code>opaque</code>.
+        The other types are meaningful when Barbican interacts with crypto backends (HSMs) or
+        when you use containers to group related cryptographic material.
+      </div>
+    </section>
+
+    {# ── Virtual Folders ───────────────────────────────────────── #}
+    <section id="virtual-folders" class="mb-5">
+      <h2><i class="bi bi-folder"></i> Virtual Folders</h2>
+      <hr>
+      <p>
+        Barbican has <strong>no native folder or namespace support</strong>. All secrets are stored in a
+        flat list within a project/tenant.
+      </p>
+      <p>
+        This UI adds <strong>virtual folders</strong> by using <code>/</code> in secret names as a path separator.
+        For example:
+      </p>
+      <div class="card mb-3">
+        <div class="card-body font-monospace">
+          production/database/mysql-password<br>
+          production/database/redis-url<br>
+          production/api/stripe-key<br>
+          staging/database/mysql-password
+        </div>
+      </div>
+      <p>This creates a browsable tree:</p>
+      <ul>
+        <li><i class="bi bi-folder-fill text-warning"></i> <strong>production</strong>
+          <ul>
+            <li><i class="bi bi-folder-fill text-warning"></i> <strong>database</strong> → <code>mysql-password</code>, <code>redis-url</code></li>
+            <li><i class="bi bi-folder-fill text-warning"></i> <strong>api</strong> → <code>stripe-key</code></li>
+          </ul>
+        </li>
+        <li><i class="bi bi-folder-fill text-warning"></i> <strong>staging</strong>
+          <ul>
+            <li><i class="bi bi-folder-fill text-warning"></i> <strong>database</strong> → <code>mysql-password</code></li>
+          </ul>
+        </li>
+      </ul>
+      <p>
+        When creating a secret, use the <strong>Path</strong> field to set the folder. The field offers
+        autocomplete with existing paths. Secrets without <code>/</code> in the name appear at the root level.
+      </p>
+    </section>
+
+    {# ── Payload Modes ─────────────────────────────────────────── #}
+    <section id="payload-modes" class="mb-5">
+      <h2><i class="bi bi-braces"></i> Payload Modes</h2>
+      <hr>
+      <p>When creating a secret, you can choose between three payload editing modes:</p>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-header"><i class="bi bi-fonts"></i> Simple</div>
+            <div class="card-body">
+              <p>Plain text or binary payload. Enter the raw value directly.</p>
+              <p class="text-muted small">Best for: single passwords, tokens, certificates (PEM format).</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100 border-primary">
+            <div class="card-header text-primary"><i class="bi bi-list-ul"></i> Key-Value</div>
+            <div class="card-body">
+              <p>Add multiple key-value pairs using a dynamic form. Stored as JSON.</p>
+              <p class="text-muted small">Best for: database credentials, connection strings, config groups.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100 border-success">
+            <div class="card-header text-success"><i class="bi bi-braces"></i> JSON</div>
+            <div class="card-body">
+              <p>Full graphical JSON editor with tree, code, and form views. Supports nested structures.</p>
+              <p class="text-muted small">Best for: complex configs, nested data, structured secrets (similar to HashiCorp Vault).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-info mt-3">
+        <i class="bi bi-lightbulb"></i>
+        Key-Value and JSON modes both store the payload as a JSON string with content type <code>text/plain</code>.
+        When viewing the secret, the UI automatically detects JSON payloads and displays them in both
+        table (key-value) and tree (JSON editor) views.
+      </div>
+    </section>
+
+    {# ── Containers ────────────────────────────────────────────── #}
+    <section id="containers" class="mb-5">
+      <h2><i class="bi bi-archive"></i> Containers</h2>
+      <hr>
+      <p>
+        A <strong>container</strong> is a <strong>logical grouping of related secrets</strong> by reference.
+        It does <em>not</em> store data itself — it holds links (URLs) to existing secrets.
+      </p>
+
+      <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        Containers are <strong>not folders</strong>. They don't create hierarchy. Think of them as
+        <strong>playlists</strong>: deleting a container does not delete the secrets it references.
+        The same secret can be in multiple containers.
+      </div>
+
+      <h5>Container Types</h5>
+      <table class="table table-sm table-hover">
+        <thead class="table-dark"><tr><th>Type</th><th>Purpose</th><th>Expected References</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>generic</code></td>
+            <td>Arbitrary group of secrets</td>
+            <td>Any names — you define the reference names</td>
+          </tr>
+          <tr>
+            <td><code>rsa</code></td>
+            <td>RSA key pair</td>
+            <td><code>public_key</code>, <code>private_key</code>, optionally <code>private_key_passphrase</code></td>
+          </tr>
+          <tr>
+            <td><code>certificate</code></td>
+            <td>TLS/SSL certificate bundle</td>
+            <td><code>certificate</code>, <code>private_key</code>, optionally <code>intermediates</code>, <code>private_key_passphrase</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h5>Typical Use Case</h5>
+      <p>
+        You have a TLS certificate setup with 3 secrets: the certificate itself, the private key,
+        and the CA chain. Instead of managing 3 separate secret IDs, you create a <code>certificate</code>
+        container that references all three. Consumers (like a load balancer) can then fetch the entire
+        bundle via one container reference.
+      </p>
+    </section>
+
+    {# ── Consumers ─────────────────────────────────────────────── #}
+    <section id="consumers" class="mb-5">
+      <h2><i class="bi bi-people"></i> Consumers</h2>
+      <hr>
+      <p>
+        A <strong>consumer</strong> is a registration record that tracks <strong>who or what is using
+        a container</strong>. Consumers are always attached to a container, not to individual secrets.
+      </p>
+
+      <h5>How Consumers Work</h5>
+      <div class="card mb-3">
+        <div class="card-body">
+          <ol class="mb-0">
+            <li>An application registers itself as a consumer of a container, providing a <strong>name</strong> and a <strong>URL</strong></li>
+            <li>Barbican records the registration</li>
+            <li>If someone tries to <strong>delete the container</strong>, Barbican <strong>blocks the deletion</strong> if consumers are registered</li>
+            <li>To delete the container, all consumers must be removed first</li>
+          </ol>
+        </div>
+      </div>
+
+      <h5>Why This Matters</h5>
+      <ul>
+        <li><strong>Protection:</strong> prevents accidental deletion of secrets that are in active use</li>
+        <li><strong>Audit trail:</strong> you can see which services depend on which secrets</li>
+        <li><strong>Coordination:</strong> before rotating a certificate, check who is consuming it</li>
+      </ul>
+
+      <div class="alert alert-secondary">
+        <i class="bi bi-geo-alt"></i>
+        <strong>Where to find consumers in this UI:</strong> Open any container's detail page → scroll down to the
+        <strong>"Consumers"</strong> section. You can register and remove consumers there.
+      </div>
+    </section>
+
+    {# ── Orders ────────────────────────────────────────────────── #}
+    <section id="orders" class="mb-5">
+      <h2><i class="bi bi-cart"></i> Orders</h2>
+      <hr>
+      <p>
+        An <strong>order</strong> is a request for Barbican to <strong>generate</strong> cryptographic material
+        server-side, rather than you creating and uploading it. This is more secure because the key
+        material is generated inside Barbican's backend (potentially an HSM) and never travels over the network.
+      </p>
+
+      <h5>Order Types</h5>
+      <table class="table table-sm table-hover">
+        <thead class="table-dark"><tr><th>Type</th><th>What It Generates</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>key</code></td>
+            <td>Symmetric key (e.g. AES-256)</td>
+            <td>A single secret with the generated key</td>
+          </tr>
+          <tr>
+            <td><code>asymmetric</code></td>
+            <td>Asymmetric key pair (e.g. RSA-2048)</td>
+            <td>A container with <code>public_key</code> and <code>private_key</code> secrets</td>
+          </tr>
+          <tr>
+            <td><code>certificate</code></td>
+            <td>X.509 certificate</td>
+            <td>Depends on CA plugin configuration</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h5>Order Lifecycle</h5>
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="badge bg-secondary">PENDING</span>
+        <i class="bi bi-arrow-right"></i>
+        <span class="badge bg-success">ACTIVE</span> (success)
+        <span class="text-muted">or</span>
+        <span class="badge bg-danger">ERROR</span> (failure)
+      </div>
+      <p>
+        After creating an order, Barbican processes it asynchronously. Once complete, the order's
+        <code>secret_ref</code> field points to the generated secret (or container for asymmetric keys).
+      </p>
+
+      <h5>When to Use Orders vs. Direct Store</h5>
+      <table class="table table-sm">
+        <thead><tr><th>Scenario</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>You already have a password/key/cert</td><td><strong>Secret Store</strong> — upload it directly</td></tr>
+          <tr><td>You need a new encryption key</td><td><strong>Order</strong> — let Barbican generate it securely</td></tr>
+          <tr><td>You need an RSA key pair</td><td><strong>Order (asymmetric)</strong> — generates both keys at once</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    {# ── Permissions ───────────────────────────────────────────── #}
+    <section id="permissions" class="mb-5">
+      <h2><i class="bi bi-shield-check"></i> Required Permissions</h2>
+      <hr>
+      <p>This application uses the <strong>minimum possible OpenStack permissions</strong>:</p>
+
+      <table class="table table-sm">
+        <thead class="table-dark"><tr><th>Service</th><th>Endpoint</th><th>Permission</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Keystone</td>
+            <td><code>POST /v3/auth/tokens</code></td>
+            <td>Any valid user (standard authentication)</td>
+          </tr>
+          <tr>
+            <td>Barbican</td>
+            <td><code>/v1/secrets/*</code>, <code>/v1/containers/*</code>, <code>/v1/orders/*</code></td>
+            <td>Project-scoped <code>creator</code> role</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert alert-success">
+        <i class="bi bi-check-circle"></i>
+        <strong>No admin access required.</strong> No access to Nova, Neutron, Glance, or any other
+        OpenStack service. The <code>creator</code> role on the key-manager service is sufficient for
+        all operations.
+      </div>
+
+      <p>To grant access:</p>
+      <pre class="bg-dark text-light p-3 rounded"><code>openstack role add --project &lt;project-id&gt; --user &lt;user-id&gt; creator</code></pre>
+    </section>
+
+    {# ── CLI Mapping ───────────────────────────────────────────── #}
+    <section id="cli-mapping" class="mb-5">
+      <h2><i class="bi bi-terminal"></i> CLI Command Mapping</h2>
+      <hr>
+      <p>Every <code>openstack secret</code> CLI command has a corresponding action in this UI:</p>
+
+      <table class="table table-sm table-hover">
+        <thead class="table-dark"><tr><th>CLI Command</th><th>UI Location</th></tr></thead>
+        <tbody>
+          <tr><td><code>secret store</code></td><td>Secrets → <strong>Create Secret</strong></td></tr>
+          <tr><td><code>secret list</code></td><td>Secrets → <strong>main page</strong> (with folder browsing)</td></tr>
+          <tr><td><code>secret get</code></td><td>Secrets → click on any secret → <strong>Detail page</strong></td></tr>
+          <tr><td><code>secret update</code></td><td>Secret detail → <strong>Set Payload</strong> form</td></tr>
+          <tr><td><code>secret delete</code></td><td>Secret detail → <strong>Delete</strong> button</td></tr>
+          <tr class="table-secondary"><td colspan="2"></td></tr>
+          <tr><td><code>secret container create</code></td><td>Containers → <strong>Create Container</strong></td></tr>
+          <tr><td><code>secret container list</code></td><td>Containers → <strong>main page</strong></td></tr>
+          <tr><td><code>secret container get</code></td><td>Containers → click on any → <strong>Detail page</strong></td></tr>
+          <tr><td><code>secret container delete</code></td><td>Container detail → <strong>Delete</strong> button</td></tr>
+          <tr class="table-secondary"><td colspan="2"></td></tr>
+          <tr><td><code>secret consumer create</code></td><td>Container detail → <strong>Register Consumer</strong></td></tr>
+          <tr><td><code>secret consumer list</code></td><td>Container detail → <strong>Consumers table</strong></td></tr>
+          <tr><td><code>secret consumer delete</code></td><td>Container detail → consumer row → <strong>Delete</strong></td></tr>
+          <tr class="table-secondary"><td colspan="2"></td></tr>
+          <tr><td><code>secret order create</code></td><td>Orders → <strong>Create Order</strong></td></tr>
+          <tr><td><code>secret order list</code></td><td>Orders → <strong>main page</strong></td></tr>
+          <tr><td><code>secret order get</code></td><td>Orders → click on any → <strong>Detail page</strong></td></tr>
+          <tr><td><code>secret order delete</code></td><td>Order detail → <strong>Delete</strong> button</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+  </div>
+</div>
+
+{% endblock %}
+
