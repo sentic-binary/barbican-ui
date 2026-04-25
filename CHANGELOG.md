@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/sentic-binary/barbican-ui/compare/v1.2.0...v1.3.0) (2026-04-25)
+
+
+### Features
+
+* add more tests to our suite ([cd72d33](https://github.com/sentic-binary/barbican-ui/commit/cd72d3341d166a3e723666c035ff842078dafd18))
+
+
+### Bug Fixes
+
+* stability & quality fixes ([81e1ad1](https://github.com/sentic-binary/barbican-ui/commit/81e1ad1fe783b546c9a435b11d3ebd777d625670))
+
 ## [1.2.0](https://github.com/sentic-binary/barbican-ui/compare/v1.1.0...v1.2.0) (2026-04-25)
 
 
