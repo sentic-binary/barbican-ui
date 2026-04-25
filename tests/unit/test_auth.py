@@ -5,9 +5,18 @@ import requests
 import responses
 
 from app.auth import authenticate, AuthError, _normalize_endpoint
+from app.config import Config
 
 
 KEYSTONE_URL = "http://keystone.test/v3"
+
+
+@pytest.fixture(autouse=True)
+def _reload_config():
+    """Ensure Config is loaded from env before each test."""
+    Config._load()
+    yield
+    Config._load()
 
 
 @responses.activate

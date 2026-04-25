@@ -19,8 +19,9 @@ COPY --from=builder /install /usr/local
 # Copy application code
 COPY app/ ./app/
 
-# Create cache and session directories
-RUN mkdir -p /tmp/barbican-ui-cache/sessions && chown -R appuser:appuser /tmp/barbican-ui-cache
+# Create cache and session directories (override default /tmp path)
+ENV CACHE_DIR=/app/data/cache
+RUN mkdir -p /app/data/cache/sessions && chown -R appuser:appuser /app/data
 
 # Switch to non-root user
 USER appuser
@@ -38,9 +39,12 @@ CMD [ \
   "--bind", "0.0.0.0:8080", \
   "--workers", "4", \
   "--timeout", "120", \
+  "--graceful-timeout", "30", \
   "--access-logfile", "-", \
   "--error-logfile", "-", \
   "--forwarded-allow-ips", "*", \
+  "--worker-tmp-dir", "/dev/shm", \
+  "--preload", \
   "app:create_app()" \
 ]
 

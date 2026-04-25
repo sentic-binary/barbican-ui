@@ -33,7 +33,7 @@ def create_app(testing: bool = False) -> Flask:
     # Server-side filesystem sessions (flask-session)
     import os as _os
     session_dir = _os.path.join(Config.CACHE_DIR, "sessions")
-    _os.makedirs(session_dir, exist_ok=True)
+    _os.makedirs(session_dir, mode=0o700, exist_ok=True)
 
     from cachelib.file import FileSystemCache
     app.config["SESSION_TYPE"] = "cachelib"
@@ -80,6 +80,9 @@ def create_app(testing: bool = False) -> Flask:
             "img-src 'self' data:; "
             "connect-src 'self'; "
             "frame-ancestors 'none'"
+        )
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=(), payment=()"
         )
         return response
 

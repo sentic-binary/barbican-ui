@@ -61,7 +61,7 @@ def create_order():
     meta: dict = {
         "name": name,
         "algorithm": algorithm,
-        "bit_length": int(bit_length) if bit_length else 256,
+        "bit_length": safe_int(bit_length, default=256, minimum=1),
         "mode": mode,
         "payload_content_type": payload_content_type,
     }
