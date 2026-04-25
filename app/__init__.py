@@ -62,6 +62,7 @@ def create_app(testing: bool = False) -> Flask:
     from app.routes.consumers import consumers_bp
     from app.routes.health import health_bp
     from app.routes.docs import docs_bp
+    from app.routes.transfer import transfer_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(secrets_bp)
@@ -70,6 +71,7 @@ def create_app(testing: bool = False) -> Flask:
     app.register_blueprint(consumers_bp)
     app.register_blueprint(health_bp)
     app.register_blueprint(docs_bp)
+    app.register_blueprint(transfer_bp)
 
     return app
 
