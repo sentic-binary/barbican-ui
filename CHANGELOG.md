@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0](https://github.com/sentic-binary/barbican-ui/compare/v1.0.0...v1.1.0) (2026-04-25)
+
+
+### Features
+
+* Add advanced button to hidde some fields ([f9029f9](https://github.com/sentic-binary/barbican-ui/commit/f9029f95503dfad1ab4b37bbf5c51651d48ece46))
+
+
+### Bug Fixes
+
+* normalize autodetected endpoints ([72820f5](https://github.com/sentic-binary/barbican-ui/commit/72820f536a227315cb7ea3659e7b9b97926801ff))
+* requirements file in python tests ([c602663](https://github.com/sentic-binary/barbican-ui/commit/c60266321bc70a846dded0bb54b7cf53f4c304dc))
+
 ## 1.0.0 (2026-04-25)
 
 
