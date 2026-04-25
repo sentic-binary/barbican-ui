@@ -26,6 +26,8 @@ class Config:
     # --- Application ---------------------------------------------------------
     SECRET_KEY: str = "change-me"
     SESSION_LIFETIME_SECONDS: int = 3600
+    SESSION_COOKIE_SECURE: bool = True
+    SESSION_BIND_IP: bool = True
     CACHE_TTL_SECONDS: int = 300
     CACHE_DIR: str = "/tmp/barbican-ui-cache"
     LOG_LEVEL: str = "INFO"
@@ -47,6 +49,8 @@ class Config:
         cls.OS_BARBICAN_ENDPOINT = os.environ.get("OS_BARBICAN_ENDPOINT", "")
         cls.SECRET_KEY = os.environ.get("SECRET_KEY", "change-me")
         cls.SESSION_LIFETIME_SECONDS = int(os.environ.get("SESSION_LIFETIME_SECONDS", "3600"))
+        cls.SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "true").lower() == "true"
+        cls.SESSION_BIND_IP = os.environ.get("SESSION_BIND_IP", "true").lower() == "true"
         cls.CACHE_TTL_SECONDS = int(os.environ.get("CACHE_TTL_SECONDS", "300"))
         cls.CACHE_DIR = os.environ.get("CACHE_DIR", "/tmp/barbican-ui-cache")
         cls.LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
