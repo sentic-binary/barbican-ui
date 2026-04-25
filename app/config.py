@@ -48,13 +48,22 @@ class Config:
         )
         cls.OS_BARBICAN_ENDPOINT = os.environ.get("OS_BARBICAN_ENDPOINT", "")
         cls.SECRET_KEY = os.environ.get("SECRET_KEY", "change-me")
-        cls.SESSION_LIFETIME_SECONDS = int(os.environ.get("SESSION_LIFETIME_SECONDS", "3600"))
+        try:
+            cls.SESSION_LIFETIME_SECONDS = int(os.environ.get("SESSION_LIFETIME_SECONDS", "3600"))
+        except ValueError:
+            cls.SESSION_LIFETIME_SECONDS = 3600
         cls.SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "true").lower() == "true"
         cls.SESSION_BIND_IP = os.environ.get("SESSION_BIND_IP", "true").lower() == "true"
-        cls.CACHE_TTL_SECONDS = int(os.environ.get("CACHE_TTL_SECONDS", "300"))
+        try:
+            cls.CACHE_TTL_SECONDS = int(os.environ.get("CACHE_TTL_SECONDS", "300"))
+        except ValueError:
+            cls.CACHE_TTL_SECONDS = 300
         cls.CACHE_DIR = os.environ.get("CACHE_DIR", "/tmp/barbican-ui-cache")
         cls.LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
-        cls.FLASK_PORT = int(os.environ.get("FLASK_PORT", "8080"))
+        try:
+            cls.FLASK_PORT = int(os.environ.get("FLASK_PORT", "8080"))
+        except ValueError:
+            cls.FLASK_PORT = 8080
 
     @classmethod
     def validate(cls) -> None:

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import re
+import time
+from collections import defaultdict
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
@@ -11,9 +14,28 @@ from app.config import Config
 from app.routes.helpers import get_auth, save_auth
 
 auth_bp = Blueprint("auth", __name__)
+logger = logging.getLogger(__name__)
 
 # Regex to detect OpenStack-style UUIDs (32 hex chars, with or without dashes)
 _HEX_ID_RE = re.compile(r"^[0-9a-fA-F]{32}$|^[0-9a-fA-F-]{36}$")
+
+# Simple in-memory rate limiter for login attempts
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+_RATE_LIMIT_WINDOW = 60  # seconds
+_RATE_LIMIT_MAX = 10  # max attempts per window
+
+
+def _is_rate_limited(ip: str) -> bool:
+    """Check if an IP has exceeded the login rate limit."""
+    now = time.monotonic()
+    attempts = _login_attempts[ip]
+    # Prune old entries
+    _login_attempts[ip] = [t for t in attempts if now - t < _RATE_LIMIT_WINDOW]
+    return len(_login_attempts[ip]) >= _RATE_LIMIT_MAX
+
+
+def _record_attempt(ip: str) -> None:
+    _login_attempts[ip].append(time.monotonic())
 
 
 @auth_bp.route("/")
@@ -37,6 +59,14 @@ def login():
             default_tenant_value=default_tenant,
             default_region=Config.OS_REGION_NAME,
         )
+
+    # Rate limiting
+    client_ip = request.remote_addr or "unknown"
+    if _is_rate_limited(client_ip):
+        logger.warning("Rate limit exceeded for IP %s", client_ip)
+        flash("Too many login attempts. Please wait a minute.", "danger")
+        return redirect(url_for("auth.login"))
+    _record_attempt(client_ip)
 
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
@@ -77,7 +107,8 @@ def login():
             region=effective_region,
         )
     except AuthError as exc:
-        flash(str(exc), "danger")
+        logger.warning("Login failed for user '%s': %s", username, exc)
+        flash("Authentication failed. Please check your credentials.", "danger")
         return redirect(url_for("auth.login"))
 
     if not token.barbican_endpoint:
@@ -93,7 +124,7 @@ def login():
     return redirect(url_for("secrets.list_secrets"))
 
 
-@auth_bp.route("/logout")
+@auth_bp.route("/logout", methods=["POST"])
 def logout():
     session.clear()
     flash("Logged out.", "info")

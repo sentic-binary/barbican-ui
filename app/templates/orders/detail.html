@@ -7,6 +7,7 @@
     <a href="/orders" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
     <form method="POST" action="/orders/{{ order.id }}/delete" class="d-inline"
           onsubmit="return confirm('Delete this order?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
     </form>
   </div>

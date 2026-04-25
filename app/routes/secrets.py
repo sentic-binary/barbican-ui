@@ -9,7 +9,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app import barbican
 from app.barbican import BarbicanError
-from app.routes.helpers import get_auth, login_required, _extract_id
+from app.routes.helpers import get_auth, login_required, _extract_id, validate_resource_id
 
 secrets_bp = Blueprint("secrets", __name__, url_prefix="/secrets")
 
@@ -173,6 +173,7 @@ def create_secret():
 @secrets_bp.route("/<secret_id>")
 @login_required
 def get_secret(secret_id: str):
+    validate_resource_id(secret_id)
     auth = get_auth()
     try:
         meta = barbican.secret_get(
@@ -222,6 +223,7 @@ def get_secret(secret_id: str):
 @secrets_bp.route("/<secret_id>/update", methods=["POST"])
 @login_required
 def update_secret(secret_id: str):
+    validate_resource_id(secret_id)
     auth = get_auth()
     payload_mode = request.form.get("payload_mode", "simple")
 
@@ -253,6 +255,7 @@ def update_secret(secret_id: str):
 @secrets_bp.route("/<secret_id>/delete", methods=["POST"])
 @login_required
 def delete_secret(secret_id: str):
+    validate_resource_id(secret_id)
     auth = get_auth()
     try:
         barbican.secret_delete(
