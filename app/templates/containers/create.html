@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Create Container — Barbican UI{% endblock %}
+{% block content %}
+<h2><i class="bi bi-plus-circle"></i> Create Container</h2>
+<hr>
+<form method="POST" action="/containers/create">
+  <div class="mb-3">
+    <label class="form-label">Name</label>
+    <input type="text" name="name" class="form-control" required placeholder="my-container">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Type</label>
+    <select name="type" class="form-select">
+      <option value="generic" selected>generic</option>
+      <option value="rsa">rsa</option>
+      <option value="certificate">certificate</option>
+    </select>
+  </div>
+
+  <h5>Secret References</h5>
+  <p class="text-muted">Link existing secrets to this container:</p>
+  <div id="refsContainer">
+    <div class="row g-2 mb-2 ref-row">
+      <div class="col-4">
+        <input type="text" name="ref_name" class="form-control" placeholder="Reference name (e.g. private_key)">
+      </div>
+      <div class="col-6">
+        <select name="ref_id" class="form-select">
+          <option value="">— Select secret —</option>
+          {% for s in secrets %}
+          <option value="{{ s.id }}">{{ s.name or s.id }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-2">
+        <button type="button" class="btn btn-outline-danger btn-sm ref-remove">&times;</button>
+      </div>
+    </div>
+  </div>
+  <button type="button" class="btn btn-outline-secondary btn-sm mb-3" id="addRef"><i class="bi bi-plus"></i> Add Reference</button>
+
+  <hr>
+  <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Create Container</button>
+  <a href="/containers" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% endblock %}
+{% block extra_js %}
+<script>
+document.getElementById('addRef').addEventListener('click', function() {
+  const tpl = document.querySelector('.ref-row');
+  const clone = tpl.cloneNode(true);
+  clone.querySelectorAll('input, select').forEach(el => el.value = '');
+  document.getElementById('refsContainer').appendChild(clone);
+});
+document.getElementById('refsContainer').addEventListener('click', function(e) {
+  if (e.target.classList.contains('ref-remove')) {
+    const rows = document.querySelectorAll('.ref-row');
+    if (rows.length > 1) e.target.closest('.ref-row').remove();
+  }
+});
+</script>
+{% endblock %}
+

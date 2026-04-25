@@ -1,0 +1,22 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named: {{ .Release.Name }}
+
+To access Barbican UI:
+
+{{- if .Values.ingress.enabled }}
+  Visit: http{{ if (index .Values.ingress.tls 0) }}s{{ end }}://{{ (index .Values.ingress.hosts 0).host }}
+{{- else }}
+  Run the following commands:
+
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "barbican-ui.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:{{ .Values.config.FLASK_PORT }}
+
+  Then open http://localhost:8080 in your browser.
+{{- end }}
+
+IMPORTANT:
+  - Ensure SECRET_KEY is set to a strong random value shared across all replicas.
+  - Configure OS_AUTH_URL to point to your Keystone endpoint.
+  - The application requires only Barbican 'creator' role — no admin access needed.
+

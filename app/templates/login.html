@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Login — Barbican UI{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card shadow">
+      <div class="card-body">
+        <h3 class="card-title text-center mb-4"><i class="bi bi-shield-lock"></i> Barbican UI</h3>
+        <p class="text-muted text-center">Sign in with your OpenStack credentials</p>
+        <form method="POST" action="/login">
+          <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input type="text" name="username" class="form-control" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Project Name</label>
+            <input type="text" name="project_name" class="form-control"
+                   value="{{ default_project_name }}" placeholder="or leave blank to use Project ID">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Project ID <small class="text-muted">(alternative)</small></label>
+            <input type="text" name="project_id" class="form-control"
+                   value="{{ default_project_id }}">
+          </div>
+          <details class="mb-3">
+            <summary class="text-muted">Advanced options</summary>
+            <div class="mt-2">
+              <div class="mb-2">
+                <label class="form-label">User Domain</label>
+                <input type="text" name="user_domain_name" class="form-control"
+                       value="{{ default_user_domain }}">
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Project Domain</label>
+                <input type="text" name="project_domain_name" class="form-control"
+                       value="{{ default_project_domain }}">
+              </div>
+            </div>
+          </details>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-box-arrow-in-right"></i> Sign In
+          </button>
+        </form>
+      </div>
+    </div>
+    <p class="text-center text-muted mt-3 small">
+      Authenticating against: <code>{{ os_auth_url }}</code>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
