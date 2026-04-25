@@ -102,6 +102,7 @@ helm install barbican-ui ./helm/barbican-ui \
 | `OS_TENANT_ID` | No | — | Default project/tenant ID (alternative to name) |
 | `BARBICAN_ENDPOINT_AUTODISCOVERY` | No | `true` | Discover Barbican endpoint from service catalog |
 | `OS_BARBICAN_ENDPOINT` | Conditional | — | Explicit Barbican URL — always overrides autodiscovery. **Required** if autodiscovery is `false` |
+| `OS_CACERT` | No | — | Path to a CA certificate bundle for TLS verification. If unset, the system default CA bundle is used |
 | `SECRET_KEY` | **Yes** | `change-me` | Flask session signing key. **Must be identical across all replicas** |
 | `SESSION_LIFETIME_SECONDS` | No | `3600` | Session/token validity in seconds |
 | `SESSION_COOKIE_SECURE` | No | `true` | Send cookie only over HTTPS. Set to `false` for local HTTP dev |
@@ -179,11 +180,11 @@ See [docs/permissions.md](docs/permissions.md) for full details.
 ## Running Tests
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 pytest
 ```
 
-40 tests (unit + integration), ~80% code coverage. Report generated in `htmlcov/`.
+190+ tests (unit + integration), ~97% code coverage. Report generated in `htmlcov/`.
 
 ## Documentation
 

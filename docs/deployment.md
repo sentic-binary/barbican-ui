@@ -134,4 +134,5 @@ helm install barbican-ui ./helm/barbican-ui -f my-values.yaml -n barbican-ui
 - [ ] Set `LOG_LEVEL=WARNING` in production
 - [ ] Use Kubernetes Secrets or external secret managers for `SECRET_KEY`
 - [ ] Monitor `/healthz` and `/readyz` endpoints
+- [ ] Set `OS_CACERT` if your cloud uses internal/private PKI certificates
 

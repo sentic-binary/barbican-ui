@@ -26,7 +26,7 @@ Barbican UI is a stateless Python/Flask web application that acts as a browser-b
 - **`__init__.py`** — Application factory (`create_app()`)
 - **`config.py`** — Environment variable configuration with validation
 - **`auth.py`** — Keystone v3 password authentication (single endpoint: `POST /v3/auth/tokens`)
-- **`barbican.py`** — Barbican API client covering all 15 operations
+- **`barbican.py`** — Barbican API client covering all 16 operations
 - **`cache.py`** — Disk-based cache using `diskcache` library
 
 ### 2. Routes (`app/routes/`)
@@ -37,6 +37,8 @@ Barbican UI is a stateless Python/Flask web application that acts as a browser-b
 - **`consumers.py`** — Consumer create/delete (nested under containers)
 - **`orders.py`** — Order CRUD
 - **`health.py`** — `/healthz` and `/readyz` for Kubernetes probes
+- **`docs.py`** — In-app documentation page
+- **`transfer.py`** — Export/import (migrate secrets between Barbican instances)
 
 ### 3. Templates (`app/templates/`)
 
@@ -46,6 +48,8 @@ Jinja2 templates using Bootstrap 5 (CDN) and JSONEditor (CDN):
 - `secrets/` — list, create (3 modes: simple/KV/JSON), detail with reveal toggle
 - `containers/` — list, create (with secret selection), detail (with consumers)
 - `orders/` — list, create, detail
+- `transfer/` — export/import wizard
+- `docs.html` — in-app documentation with Barbican concepts
 
 ### 4. Caching Strategy
 
@@ -57,9 +61,12 @@ Jinja2 templates using Bootstrap 5 (CDN) and JSONEditor (CDN):
 
 ### 5. Session Management
 
-- Keystone tokens stored in Flask signed cookies (`SECRET_KEY`)
+- Server-side file-based sessions via `flask-session` with `cachelib` (stored in `CACHE_DIR/sessions`)
+- Session cookie is `HttpOnly`, `SameSite=Lax`, optionally `Secure`
+- Keystone token and metadata stored server-side; only a session ID cookie is sent to the browser
 - Token expiry checked on every request via `@login_required` decorator
-- All replicas must share the same `SECRET_KEY` for sessions to work cross-pod
+- Optional IP binding (`SESSION_BIND_IP`) rejects sessions if client IP changes
+- All replicas must share the same `SECRET_KEY` for session signing to work cross-pod
 
 ## Request Flow
 

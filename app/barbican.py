@@ -1,6 +1,6 @@
 """Barbican UI – Barbican API client.
 
-Covers all 15 CLI-equivalent operations:
+Covers all 16 CLI-equivalent operations:
   Secrets:    store, list, get, delete, update
   Containers: create, list, get, delete
   Consumers:  create, list, delete

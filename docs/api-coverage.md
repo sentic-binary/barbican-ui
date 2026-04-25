@@ -27,6 +27,7 @@ This document maps every `openstack secret` CLI command to its corresponding Bar
 
 | Feature | Description |
 |---------|-------------|
+| **Virtual Folders** | Organize secrets hierarchically using `/` in names, with breadcrumb navigation and folder browsing |
 | **Key-Value Editor** | Create/view secrets as key-value pairs (stored as JSON payload) |
 | **JSON Editor** | Full graphical JSON editor (tree, code, form views) powered by JSONEditor — similar to HashiCorp Vault |
 | **Multi-value Secrets** | Store complex structured data as JSON, edit graphically |
@@ -34,6 +35,7 @@ This document maps every `openstack secret` CLI command to its corresponding Bar
 | **Search & Filter** | Filter secrets by name |
 | **Pagination** | All list views are paginated |
 | **Disk Cache** | Responses cached to minimize API calls, with automatic invalidation on mutations |
+| **Export / Import** | Migrate secrets and containers between Barbican instances, regions, or projects via versioned JSON files |
 
 ## Container Types Supported
 
