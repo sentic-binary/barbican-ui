@@ -60,7 +60,7 @@ def test_login_failure(client):
 
 
 def test_logout(auth_session):
-    resp = auth_session.get("/logout", follow_redirects=False)
+    resp = auth_session.post("/logout", follow_redirects=False)
     assert resp.status_code == 302
 
 

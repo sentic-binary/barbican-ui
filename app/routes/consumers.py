@@ -6,7 +6,7 @@ from flask import Blueprint, flash, redirect, request, url_for
 
 from app import barbican
 from app.barbican import BarbicanError
-from app.routes.helpers import get_auth, login_required
+from app.routes.helpers import get_auth, login_required, validate_resource_id
 
 consumers_bp = Blueprint("consumers", __name__, url_prefix="/consumers")
 
@@ -14,6 +14,7 @@ consumers_bp = Blueprint("consumers", __name__, url_prefix="/consumers")
 @consumers_bp.route("/<container_id>/create", methods=["POST"])
 @login_required
 def create_consumer(container_id: str):
+    validate_resource_id(container_id)
     auth = get_auth()
     name = request.form.get("name", "").strip()
     consumer_url = request.form.get("url", "").strip()
@@ -37,6 +38,7 @@ def create_consumer(container_id: str):
 @consumers_bp.route("/<container_id>/delete", methods=["POST"])
 @login_required
 def delete_consumer(container_id: str):
+    validate_resource_id(container_id)
     auth = get_auth()
     name = request.form.get("name", "").strip()
     consumer_url = request.form.get("url", "").strip()

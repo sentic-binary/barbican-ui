@@ -102,4 +102,3 @@ jobs:
           tags: barbican-ui:test
           cache-from: type=gha
           cache-to: type=gha,mode=min
-

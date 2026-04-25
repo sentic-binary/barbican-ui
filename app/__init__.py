@@ -28,7 +28,32 @@ def create_app(testing: bool = False) -> Flask:
     app.config["SESSION_COOKIE_SECURE"] = Config.SESSION_COOKIE_SECURE
     app.config["SESSION_COOKIE_NAME"] = "barbican_ui_session"
     app.config["PERMANENT_SESSION_LIFETIME"] = Config.SESSION_LIFETIME_SECONDS
+    app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB upload limit
+
+    # Server-side filesystem sessions (flask-session)
+    import os as _os
+    session_dir = _os.path.join(Config.CACHE_DIR, "sessions")
+    _os.makedirs(session_dir, exist_ok=True)
+
+    from cachelib.file import FileSystemCache
+    app.config["SESSION_TYPE"] = "cachelib"
+    app.config["SESSION_CACHELIB"] = FileSystemCache(
+        cache_dir=session_dir,
+        threshold=500,
+    )
+    app.config["SESSION_PERMANENT"] = True
+
+    from flask_session import Session
+    Session(app)
+
+    # CSRF protection (flask-wtf)
+    from flask_wtf.csrf import CSRFProtect
+
+    csrf = CSRFProtect(app)
     app.config["WTF_CSRF_ENABLED"] = not testing
+    # Exempt health endpoints from CSRF
+    csrf.exempt("health.healthz")
+    csrf.exempt("health.readyz")
 
     # Logging
     logging.basicConfig(
@@ -43,6 +68,10 @@ def create_app(testing: bool = False) -> Flask:
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if Config.SESSION_COOKIE_SECURE:
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "

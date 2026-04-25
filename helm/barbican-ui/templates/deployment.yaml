@@ -50,17 +50,24 @@ spec:
             {{- toYaml .Values.readinessProbe | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- if .Values.persistence.enabled }}
           volumeMounts:
             - name: cache
               mountPath: {{ .Values.config.CACHE_DIR }}
-          {{- end }}
-      {{- if .Values.persistence.enabled }}
+            - name: tmp
+              mountPath: /tmp
       volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
+        {{- if .Values.persistence.enabled }}
         - name: cache
           persistentVolumeClaim:
             claimName: {{ include "barbican-ui.fullname" . }}-cache
-      {{- end }}
+        {{- else }}
+        - name: cache
+          emptyDir:
+            sizeLimit: 512Mi
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

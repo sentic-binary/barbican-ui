@@ -19,8 +19,8 @@ COPY --from=builder /install /usr/local
 # Copy application code
 COPY app/ ./app/
 
-# Create cache directory
-RUN mkdir -p /tmp/barbican-ui-cache && chown appuser:appuser /tmp/barbican-ui-cache
+# Create cache and session directories
+RUN mkdir -p /tmp/barbican-ui-cache/sessions && chown -R appuser:appuser /tmp/barbican-ui-cache
 
 # Switch to non-root user
 USER appuser

@@ -135,14 +135,15 @@ def export_data():
                 "consumers": consumers,
             })
 
-    # Build filename
+    # Build filename (sanitize project name for safe filenames)
+    safe_project = "".join(c for c in auth.project_name if c.isalnum() or c in "-_.")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"barbican_export_{auth.project_name}_{timestamp}.json"
+    filename = f"barbican_export_{safe_project}_{timestamp}.json"
 
     return Response(
         json.dumps(export, indent=2, ensure_ascii=False),
         mimetype="application/json",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
@@ -259,7 +260,6 @@ def import_data():
 
         # Resolve secret references by name
         secret_refs = []
-        missing_refs = False
         for sr in container.get("secret_refs", []):
             secret_name = sr.get("secret_name", "")
             new_id = name_to_new_id.get(secret_name)
@@ -267,7 +267,6 @@ def import_data():
                 results["errors"].append(
                     f"Container '{cname}': secret '{secret_name}' not found, skipping reference"
                 )
-                missing_refs = True
                 continue
             secret_refs.append({
                 "name": sr.get("name", ""),
