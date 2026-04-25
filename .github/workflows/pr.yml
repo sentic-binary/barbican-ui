@@ -55,10 +55,24 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Run tests
         run: pytest
+
+      - name: Smoke test – application starts and serves /healthz
+        env:
+          OS_AUTH_URL: "http://keystone.test/v3"
+          SECRET_KEY: "ci-test-secret-key-not-for-production"
+          BARBICAN_ENDPOINT_AUTODISCOVERY: "false"
+          OS_BARBICAN_ENDPOINT: "http://barbican.test"
+          SESSION_COOKIE_SECURE: "false"
+        run: |
+          pip install gunicorn
+          gunicorn "app:create_app()" --bind 127.0.0.1:8080 --workers 1 --timeout 10 &
+          sleep 3
+          curl -sf http://127.0.0.1:8080/healthz || (echo "Health check failed" && exit 1)
+          kill %1
 
   # ── Helm lint & template ───────────────────────────────────────────
   helm:
