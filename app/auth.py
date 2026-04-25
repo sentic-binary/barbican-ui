@@ -138,6 +138,13 @@ def authenticate(
     )
 
 
+def _normalize_endpoint(url: str) -> str:
+    """Strip trailing version path (e.g. /v1) so the app can prepend it consistently."""
+    import re
+    url = url.rstrip("/")
+    return re.sub(r"/v\d+(\.\d+)?$", "", url)
+
+
 def _resolve_barbican_endpoint(catalog: list[dict[str, Any]], region: str = "") -> str:
     """Determine the Barbican endpoint to use.
 
@@ -148,7 +155,7 @@ def _resolve_barbican_endpoint(catalog: list[dict[str, Any]], region: str = "") 
     """
     # 1. Explicit override
     if Config.OS_BARBICAN_ENDPOINT:
-        return Config.OS_BARBICAN_ENDPOINT.rstrip("/")
+        return _normalize_endpoint(Config.OS_BARBICAN_ENDPOINT)
 
     # 2. Autodiscovery
     if Config.BARBICAN_ENDPOINT_AUTODISCOVERY:
@@ -159,7 +166,7 @@ def _resolve_barbican_endpoint(catalog: list[dict[str, Any]], region: str = "") 
                     for ep in svc.get("endpoints", []):
                         if ep.get("interface") == "public":
                             if ep.get("region") == region or ep.get("region_id") == region:
-                                url = ep.get("url", "").rstrip("/")
+                                url = _normalize_endpoint(ep.get("url", ""))
                                 logger.info("Barbican endpoint discovered (region=%s): %s", region, url)
                                 return url
                     logger.warning("No key-manager endpoint in region '%s', falling back to first public endpoint", region)
@@ -167,7 +174,7 @@ def _resolve_barbican_endpoint(catalog: list[dict[str, Any]], region: str = "") 
                 # Second pass (or no region): take first public endpoint
                 for ep in svc.get("endpoints", []):
                     if ep.get("interface") == "public":
-                        url = ep.get("url", "").rstrip("/")
+                        url = _normalize_endpoint(ep.get("url", ""))
                         ep_region = ep.get("region") or ep.get("region_id") or "unknown"
                         logger.info("Barbican endpoint discovered (region=%s): %s", ep_region, url)
                         return url
