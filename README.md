@@ -12,7 +12,7 @@ Many virtual machine and Kubernetes cluster providers are built on top of OpenSt
 
 The primary goal of this project is to leverage Barbican as a **simple, zero-install secret engine** for projects running on such providers. Barbican can also be queried by tools like [External Secrets Operator](https://external-secrets.io/) on Kubernetes, giving you a complete secrets workflow — without deploying and maintaining a full [HashiCorp Vault](https://www.vaultproject.io/) instance.
 
-**Why not just use [Horizon](https://docs.openstack.org/horizon/latest/) or [Skyline](https://docs.openstack.org/skyline/latest/)?** These are full-featured OpenStack dashboards — they're heavy, require broad admin-level API permissions, and are complex to deploy. Barbican UI is intentionally **lightweight and focused**: it only needs the Barbican `creator` role, talks to just two API endpoints (Keystone auth + Barbican), and can be deployed as a single container.
+**Why not just use [Horizon](https://docs.openstack.org/horizon/latest/) or [Skyline](https://wiki.openstack.org/wiki/Skyline)?** These are full-featured OpenStack dashboards — they're heavy, require broad admin-level API permissions, and are complex to deploy. Barbican UI is intentionally **lightweight and focused**: it only needs the Barbican `creator` role, talks to just two API endpoints (Keystone auth + Barbican), and can be deployed as a single container.
 
 ## Features
 
