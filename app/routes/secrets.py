@@ -1,8 +1,9 @@
-"""Secret management routes."""
+"""Secret management routes with virtual folder browsing."""
 
 from __future__ import annotations
 
 import json
+from collections import defaultdict
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
@@ -12,44 +13,96 @@ from app.routes.helpers import get_auth, login_required, _extract_id
 
 secrets_bp = Blueprint("secrets", __name__, url_prefix="/secrets")
 
+PATH_SEP = "/"
+
+
+def _build_folder_tree(secrets: list[dict]) -> dict:
+    """Build virtual folder paths from secret names using '/' as separator."""
+    all_paths: set[str] = set()
+    for s in secrets:
+        name = s.get("name", "") or ""
+        parts = name.split(PATH_SEP)
+        if len(parts) > 1:
+            for i in range(1, len(parts)):
+                all_paths.add(PATH_SEP.join(parts[:i]))
+    return {"all_paths": sorted(all_paths)}
+
+
+def _filter_by_path(secrets: list[dict], path: str) -> tuple[list[dict], list[dict]]:
+    """Return (subfolder_info_list, secrets_in_this_folder) for a path prefix."""
+    prefix = (path + PATH_SEP) if path else ""
+    subfolder_counts: dict[str, int] = defaultdict(int)
+    current_secrets: list[dict] = []
+
+    for s in secrets:
+        name = s.get("name", "") or ""
+        if not prefix:
+            if PATH_SEP in name:
+                subfolder_counts[name.split(PATH_SEP)[0]] += 1
+            else:
+                current_secrets.append(s)
+        else:
+            if name.startswith(prefix):
+                remainder = name[len(prefix):]
+                if PATH_SEP in remainder:
+                    subfolder_counts[remainder.split(PATH_SEP)[0]] += 1
+                else:
+                    current_secrets.append(s)
+
+    subfolder_info = [
+        {"name": sf, "count": cnt}
+        for sf, cnt in sorted(subfolder_counts.items())
+    ]
+    return subfolder_info, current_secrets
+
 
 @secrets_bp.route("/")
 @login_required
 def list_secrets():
     auth = get_auth()
-    page = int(request.args.get("page", 1))
-    limit = 20
-    offset = (page - 1) * limit
+    path = request.args.get("path", "").strip().strip(PATH_SEP)
     name_filter = request.args.get("name", "")
 
     try:
-        data = barbican.secret_list(
-            auth.barbican_endpoint,
-            auth.token,
-            auth.project_id,
-            limit=limit,
-            offset=offset,
-            name=name_filter,
+        all_data = barbican.secret_list(
+            auth.barbican_endpoint, auth.token, auth.project_id,
+            limit=500, offset=0, name=name_filter,
         )
     except BarbicanError as exc:
         flash(str(exc), "danger")
-        data = {"secrets": [], "total": 0}
+        all_data = {"secrets": [], "total": 0}
 
-    secrets = data.get("secrets", [])
-    total = data.get("total", len(secrets))
+    all_secrets = all_data.get("secrets", [])
+    total = all_data.get("total", len(all_secrets))
 
-    # Extract IDs from hrefs
-    for s in secrets:
+    for s in all_secrets:
         s["id"] = _extract_id(s.get("secret_ref", ""))
+
+    tree = _build_folder_tree(all_secrets)
+
+    if name_filter:
+        subfolders = []
+        current_secrets = all_secrets
+    else:
+        subfolders, current_secrets = _filter_by_path(all_secrets, path)
+
+    # Breadcrumb
+    breadcrumb = []
+    if path:
+        parts = path.split(PATH_SEP)
+        for i, part in enumerate(parts):
+            breadcrumb.append({"name": part, "path": PATH_SEP.join(parts[:i + 1])})
+
+    # Short names for display
+    for s in current_secrets:
+        full_name = s.get("name", "") or ""
+        s["short_name"] = full_name.rsplit(PATH_SEP, 1)[-1] if PATH_SEP in full_name else full_name
 
     return render_template(
         "secrets/list.html",
-        secrets=secrets,
-        total=total,
-        page=page,
-        limit=limit,
-        name_filter=name_filter,
-        auth=auth,
+        secrets=current_secrets, subfolders=subfolders, total=total,
+        path=path, breadcrumb=breadcrumb, name_filter=name_filter,
+        all_paths=tree["all_paths"], auth=auth,
     )
 
 
@@ -57,10 +110,30 @@ def list_secrets():
 @login_required
 def create_secret():
     auth = get_auth()
-    if request.method == "GET":
-        return render_template("secrets/create.html", auth=auth)
 
-    name = request.form.get("name", "").strip()
+    if request.method == "GET":
+        path_prefix = request.args.get("path", "").strip().strip(PATH_SEP)
+        try:
+            all_data = barbican.secret_list(
+                auth.barbican_endpoint, auth.token, auth.project_id, limit=500
+            )
+            all_secrets = all_data.get("secrets", [])
+        except BarbicanError:
+            all_secrets = []
+        tree = _build_folder_tree(all_secrets)
+        return render_template(
+            "secrets/create.html", auth=auth,
+            path_prefix=path_prefix, all_paths=tree["all_paths"],
+        )
+
+    # POST — build full name from path + name
+    path_prefix = request.form.get("path_prefix", "").strip().strip(PATH_SEP)
+    short_name = request.form.get("name", "").strip()
+    if path_prefix and short_name:
+        name = path_prefix + PATH_SEP + short_name
+    else:
+        name = short_name or path_prefix
+
     secret_type = request.form.get("secret_type", "opaque")
     payload_mode = request.form.get("payload_mode", "simple")
     algorithm = request.form.get("algorithm", "").strip()
@@ -68,15 +141,10 @@ def create_secret():
     mode = request.form.get("mode", "").strip()
     expiration = request.form.get("expiration", "").strip()
 
-    # Build payload based on mode
     if payload_mode == "kv":
         keys = request.form.getlist("kv_key")
         values = request.form.getlist("kv_value")
-        payload_dict = {}
-        for k, v in zip(keys, values):
-            k = k.strip()
-            if k:
-                payload_dict[k] = v
+        payload_dict = {k.strip(): v for k, v in zip(keys, values) if k.strip()}
         payload = json.dumps(payload_dict, indent=2)
         content_type = "text/plain"
     elif payload_mode == "json":
@@ -88,17 +156,11 @@ def create_secret():
 
     try:
         result = barbican.secret_store(
-            auth.barbican_endpoint,
-            auth.token,
-            auth.project_id,
-            name=name,
-            payload=payload,
-            payload_content_type=content_type,
-            secret_type=secret_type,
-            algorithm=algorithm,
+            auth.barbican_endpoint, auth.token, auth.project_id,
+            name=name, payload=payload, payload_content_type=content_type,
+            secret_type=secret_type, algorithm=algorithm,
             bit_length=int(bit_length) if bit_length else 0,
-            mode=mode,
-            expiration=expiration,
+            mode=mode, expiration=expiration,
         )
         secret_id = _extract_id(result.get("secret_ref", ""))
         flash("Secret created successfully.", "success")
@@ -133,7 +195,6 @@ def get_secret(secret_id: str):
         except BarbicanError as exc:
             payload_error = str(exc)
 
-    # Try to parse payload as JSON for key-value display
     payload_json = None
     if payload:
         try:
@@ -144,13 +205,17 @@ def get_secret(secret_id: str):
             pass
 
     meta["id"] = secret_id
+
+    # Derive parent path for back navigation
+    secret_name = meta.get("name", "") or ""
+    parent_path = ""
+    if PATH_SEP in secret_name:
+        parent_path = secret_name.rsplit(PATH_SEP, 1)[0]
+
     return render_template(
         "secrets/detail.html",
-        secret=meta,
-        payload=payload,
-        payload_json=payload_json,
-        payload_error=payload_error,
-        auth=auth,
+        secret=meta, payload=payload, payload_json=payload_json,
+        payload_error=payload_error, parent_path=parent_path, auth=auth,
     )
 
 
@@ -163,11 +228,7 @@ def update_secret(secret_id: str):
     if payload_mode == "kv":
         keys = request.form.getlist("kv_key")
         values = request.form.getlist("kv_value")
-        payload_dict = {}
-        for k, v in zip(keys, values):
-            k = k.strip()
-            if k:
-                payload_dict[k] = v
+        payload_dict = {k.strip(): v for k, v in zip(keys, values) if k.strip()}
         payload = json.dumps(payload_dict, indent=2)
         content_type = "text/plain"
     elif payload_mode == "json":
@@ -179,12 +240,8 @@ def update_secret(secret_id: str):
 
     try:
         barbican.secret_update(
-            auth.barbican_endpoint,
-            auth.token,
-            auth.project_id,
-            secret_id,
-            payload=payload,
-            payload_content_type=content_type,
+            auth.barbican_endpoint, auth.token, auth.project_id,
+            secret_id, payload=payload, payload_content_type=content_type,
         )
         flash("Secret payload updated.", "success")
     except BarbicanError as exc:
