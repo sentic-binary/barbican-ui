@@ -5,9 +5,10 @@ from __future__ import annotations
 from functools import wraps
 from typing import Any
 
-from flask import redirect, session, url_for, flash
+from flask import redirect, request, session, url_for, flash
 
 from app.auth import AuthToken
+from app.config import Config
 
 
 def get_auth() -> AuthToken | None:
@@ -16,6 +17,14 @@ def get_auth() -> AuthToken | None:
     if data is None:
         return None
     try:
+        # IP binding check — reject session if IP changed
+        if Config.SESSION_BIND_IP:
+            stored_ip = data.get("client_ip", "")
+            current_ip = request.remote_addr or ""
+            if stored_ip and current_ip and stored_ip != current_ip:
+                session.clear()
+                return None
+
         from datetime import datetime
         token = AuthToken(
             token=data["token"],
@@ -46,6 +55,7 @@ def save_auth(token: AuthToken) -> None:
         "user_id": token.user_id,
         "user_name": token.user_name,
         "barbican_endpoint": token.barbican_endpoint,
+        "client_ip": request.remote_addr or "",
     }
     session.permanent = True
 
