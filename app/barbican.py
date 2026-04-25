@@ -19,7 +19,7 @@ from typing import Any
 
 import requests
 
-from app.cache import cache_delete, cache_get, cache_invalidate_prefix, cache_set
+from app.cache import cache_get, cache_invalidate_prefix, cache_set
 from app.config import Config
 
 logger = logging.getLogger(__name__)
@@ -33,6 +33,14 @@ class BarbicanError(Exception):
     def __init__(self, message: str, status_code: int = 0):
         super().__init__(message)
         self.status_code = status_code
+
+
+def _request(method: str, url: str, **kwargs) -> requests.Response:
+    """Perform an HTTP request, converting connection errors to BarbicanError."""
+    try:
+        return requests.request(method, url, timeout=_TIMEOUT, verify=_verify(), **kwargs)
+    except requests.RequestException as exc:
+        raise BarbicanError(f"Connection error: {exc}", status_code=0) from exc
 
 
 def _verify() -> bool | str:
@@ -103,11 +111,11 @@ def secret_store(
     if expiration:
         body["expiration"] = expiration
 
-    resp = requests.post(
+    resp = _request(
+        "POST",
         _url(endpoint, "v1/secrets"),
         json=body,
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp, (200, 201))
     cache_invalidate_prefix(_cache_key(project_id, "secrets"))
@@ -134,11 +142,11 @@ def secret_list(
     if name:
         params["name"] = name
 
-    resp = requests.get(
+    resp = _request(
+        "GET",
         _url(endpoint, "v1/secrets"),
         params=params,
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp)
     data = resp.json()
@@ -158,10 +166,10 @@ def secret_get(
     if cached is not None:
         return cached
 
-    resp = requests.get(
+    resp = _request(
+        "GET",
         _url(endpoint, f"v1/secrets/{secret_id}"),
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp)
     data = resp.json()
@@ -181,10 +189,10 @@ def secret_get_payload(
     NOTE: Payloads are intentionally NOT cached to avoid storing
     sensitive plaintext data on disk.
     """
-    resp = requests.get(
+    resp = _request(
+        "GET",
         _url(endpoint, f"v1/secrets/{secret_id}/payload"),
         headers={"X-Auth-Token": token, "Accept": accept},
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp)
     return resp.text
@@ -197,10 +205,10 @@ def secret_delete(
     secret_id: str,
 ) -> None:
     """DELETE /v1/secrets/{id}"""
-    resp = requests.delete(
+    resp = _request(
+        "DELETE",
         _url(endpoint, f"v1/secrets/{secret_id}"),
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp, (200, 204))
     cache_invalidate_prefix(_cache_key(project_id, "secrets"))
@@ -223,11 +231,11 @@ def secret_update(
     if payload_content_encoding:
         hdrs["Content-Encoding"] = payload_content_encoding
 
-    resp = requests.put(
+    resp = _request(
+        "PUT",
         _url(endpoint, f"v1/secrets/{secret_id}"),
         data=payload.encode("utf-8") if isinstance(payload, str) else payload,
         headers=hdrs,
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp, (200, 204))
     cache_invalidate_prefix(_cache_key(project_id, f"secrets:{secret_id}"))
@@ -251,11 +259,11 @@ def container_create(
         "type": container_type,
         "secret_refs": secret_refs or [],
     }
-    resp = requests.post(
+    resp = _request(
+        "POST",
         _url(endpoint, "v1/containers"),
         json=body,
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp, (200, 201))
     cache_invalidate_prefix(_cache_key(project_id, "containers"))
@@ -276,11 +284,11 @@ def container_list(
     if cached is not None:
         return cached
 
-    resp = requests.get(
+    resp = _request(
+        "GET",
         _url(endpoint, "v1/containers"),
         params={"limit": limit, "offset": offset},
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp)
     data = resp.json()
@@ -300,10 +308,10 @@ def container_get(
     if cached is not None:
         return cached
 
-    resp = requests.get(
+    resp = _request(
+        "GET",
         _url(endpoint, f"v1/containers/{container_id}"),
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp)
     data = resp.json()
@@ -318,10 +326,10 @@ def container_delete(
     container_id: str,
 ) -> None:
     """DELETE /v1/containers/{id}"""
-    resp = requests.delete(
+    resp = _request(
+        "DELETE",
         _url(endpoint, f"v1/containers/{container_id}"),
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp, (200, 204))
     cache_invalidate_prefix(_cache_key(project_id, "containers"))
@@ -340,11 +348,11 @@ def consumer_create(
 ) -> dict[str, Any]:
     """POST /v1/containers/{id}/consumers"""
     body = {"name": name, "URL": url}
-    resp = requests.post(
+    resp = _request(
+        "POST",
         _url(endpoint, f"v1/containers/{container_id}/consumers"),
         json=body,
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp, (200, 201))
     cache_invalidate_prefix(_cache_key(project_id, f"containers:{container_id}"))
@@ -366,11 +374,11 @@ def consumer_list(
     if cached is not None:
         return cached
 
-    resp = requests.get(
+    resp = _request(
+        "GET",
         _url(endpoint, f"v1/containers/{container_id}/consumers"),
         params={"limit": limit, "offset": offset},
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp)
     data = resp.json()
@@ -389,11 +397,11 @@ def consumer_delete(
 ) -> None:
     """DELETE /v1/containers/{id}/consumers"""
     body = {"name": name, "URL": url}
-    resp = requests.delete(
+    resp = _request(
+        "DELETE",
         _url(endpoint, f"v1/containers/{container_id}/consumers"),
         json=body,
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp, (200, 204))
     cache_invalidate_prefix(_cache_key(project_id, f"containers:{container_id}"))
@@ -411,11 +419,11 @@ def order_create(
 ) -> dict[str, Any]:
     """POST /v1/orders"""
     body: dict[str, Any] = {"type": order_type, "meta": meta or {}}
-    resp = requests.post(
+    resp = _request(
+        "POST",
         _url(endpoint, "v1/orders"),
         json=body,
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp, (200, 201, 202))
     cache_invalidate_prefix(_cache_key(project_id, "orders"))
@@ -436,11 +444,11 @@ def order_list(
     if cached is not None:
         return cached
 
-    resp = requests.get(
+    resp = _request(
+        "GET",
         _url(endpoint, "v1/orders"),
         params={"limit": limit, "offset": offset},
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp)
     data = resp.json()
@@ -460,10 +468,10 @@ def order_get(
     if cached is not None:
         return cached
 
-    resp = requests.get(
+    resp = _request(
+        "GET",
         _url(endpoint, f"v1/orders/{order_id}"),
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp)
     data = resp.json()
@@ -478,10 +486,10 @@ def order_delete(
     order_id: str,
 ) -> None:
     """DELETE /v1/orders/{id}"""
-    resp = requests.delete(
+    resp = _request(
+        "DELETE",
         _url(endpoint, f"v1/orders/{order_id}"),
         headers=_headers(token),
-        timeout=_TIMEOUT, verify=_verify(),
     )
     _check(resp, (200, 204))
     cache_invalidate_prefix(_cache_key(project_id, "orders"))

@@ -11,10 +11,10 @@ from flask import abort, redirect, request, session, url_for, flash
 from app.auth import AuthToken
 from app.config import Config
 
-# Valid UUID pattern for resource IDs
+# Valid resource ID pattern: UUID or alphanumeric with hyphens/underscores (max 255 chars)
 _UUID_RE = re.compile(
-    r"^[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}$"
-    r"|^[a-zA-Z0-9_-]+$"
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    r"|^[a-zA-Z0-9][a-zA-Z0-9_-]{0,253}[a-zA-Z0-9]$"
 )
 
 

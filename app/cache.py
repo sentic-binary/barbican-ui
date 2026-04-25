@@ -41,7 +41,6 @@ def get_cache() -> diskcache.Cache:
         )
         logger.info("Cache initialised at %s", Config.CACHE_DIR)
     return _cache
-    return _cache
 
 
 def cache_get(key: str):
