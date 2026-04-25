@@ -2,8 +2,8 @@ apiVersion: v2
 name: barbican-ui
 description: A Helm chart for Barbican UI — OpenStack secret management web interface
 type: application
-version: 1.0.0
-appVersion: "1.0.0"
+version: 0.0.0-dev
+appVersion: "0.0.0-dev"
 keywords:
   - openstack
   - barbican

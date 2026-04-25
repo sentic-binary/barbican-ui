@@ -4,8 +4,9 @@
 replicaCount: 2
 
 image:
-  repository: barbican-ui
-  tag: "1.0.0"
+  repository: ghcr.io/sentic-binary/barbican-ui
+  # Tag is set automatically by CI from git tag. Override for manual deploys.
+  tag: ""
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
