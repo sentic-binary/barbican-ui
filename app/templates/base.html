@@ -57,6 +57,9 @@
 
   <footer class="container mt-5 mb-3 text-center text-muted small">
     Barbican UI &mdash; OpenStack Secret Management
+    {% if auth %}
+    <br><i class="bi bi-hdd-network"></i> Barbican API: <code>{{ auth.barbican_endpoint }}</code>
+    {% endif %}
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
