@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Create Order — Barbican UI{% endblock %}
+{% block content %}
+<h2><i class="bi bi-plus-circle"></i> Create Order</h2>
+<hr>
+<form method="POST" action="/orders/create">
+  <div class="row">
+    <div class="col-md-6">
+      <div class="mb-3">
+        <label class="form-label">Order Type</label>
+        <select name="type" class="form-select" id="orderType">
+          <option value="key" selected>key (symmetric)</option>
+          <option value="asymmetric">asymmetric</option>
+          <option value="certificate">certificate</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input type="text" name="name" class="form-control" placeholder="my-key">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Algorithm</label>
+        <input type="text" name="algorithm" class="form-control" value="aes" id="algoField">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Bit Length</label>
+        <input type="number" name="bit_length" class="form-control" value="256">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Mode</label>
+        <input type="text" name="mode" class="form-control" value="cbc" id="modeField">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Payload Content Type</label>
+        <input type="text" name="payload_content_type" class="form-control" value="application/octet-stream">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Expiration <small class="text-muted">(optional, ISO 8601)</small></label>
+        <input type="text" name="expiration" class="form-control" placeholder="2026-12-31T23:59:59">
+      </div>
+    </div>
+  </div>
+  <hr>
+  <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Create Order</button>
+  <a href="/orders" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.getElementById('orderType').addEventListener('change', function() {
+  const algo = document.getElementById('algoField');
+  const mode = document.getElementById('modeField');
+  if (this.value === 'asymmetric') { algo.value = 'rsa'; mode.value = ''; }
+  else if (this.value === 'key') { algo.value = 'aes'; mode.value = 'cbc'; }
+  else { algo.value = ''; mode.value = ''; }
+});
+</script>
+{% endblock %}
+

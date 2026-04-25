@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  barbican-ui:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - cache-data:/tmp/barbican-ui-cache
+    restart: unless-stopped
+
+volumes:
+  cache-data:
+

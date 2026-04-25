@@ -1,0 +1,14 @@
+apiVersion: v2
+name: barbican-ui
+description: A Helm chart for Barbican UI — OpenStack secret management web interface
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - openstack
+  - barbican
+  - secrets
+  - key-manager
+maintainers:
+  - name: Barbican UI Team
+
