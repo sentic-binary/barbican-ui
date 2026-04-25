@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 
+from dotenv import load_dotenv
 from flask import Flask
 
 from app.config import Config
@@ -12,6 +13,7 @@ from app.config import Config
 
 def create_app(testing: bool = False) -> Flask:
     """Create and configure the Flask application."""
+    load_dotenv()
     Config.validate()
 
     app = Flask(

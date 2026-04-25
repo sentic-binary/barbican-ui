@@ -25,7 +25,7 @@ def get_auth() -> AuthToken | None:
             user_id=data["user_id"],
             user_name=data["user_name"],
             barbican_endpoint=data["barbican_endpoint"],
-            catalog=data.get("catalog", []),
+            catalog=[],
         )
         if token.is_expired:
             session.clear()
@@ -46,7 +46,6 @@ def save_auth(token: AuthToken) -> None:
         "user_id": token.user_id,
         "user_name": token.user_name,
         "barbican_endpoint": token.barbican_endpoint,
-        "catalog": token.catalog,
     }
     session.permanent = True
 
