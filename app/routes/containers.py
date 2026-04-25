@@ -6,7 +6,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app import barbican
 from app.barbican import BarbicanError
-from app.routes.helpers import get_auth, login_required, _extract_id
+from app.routes.helpers import get_auth, login_required, _extract_id, validate_resource_id, safe_int
 
 containers_bp = Blueprint("containers", __name__, url_prefix="/containers")
 
@@ -15,7 +15,7 @@ containers_bp = Blueprint("containers", __name__, url_prefix="/containers")
 @login_required
 def list_containers():
     auth = get_auth()
-    page = int(request.args.get("page", 1))
+    page = safe_int(request.args.get("page", "1"))
     limit = 20
     offset = (page - 1) * limit
 
@@ -92,6 +92,7 @@ def create_container():
 @containers_bp.route("/<container_id>")
 @login_required
 def get_container(container_id: str):
+    validate_resource_id(container_id)
     auth = get_auth()
     try:
         container = barbican.container_get(
@@ -126,6 +127,7 @@ def get_container(container_id: str):
 @containers_bp.route("/<container_id>/delete", methods=["POST"])
 @login_required
 def delete_container(container_id: str):
+    validate_resource_id(container_id)
     auth = get_auth()
     try:
         barbican.container_delete(

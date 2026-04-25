@@ -9,6 +9,8 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key-for-unit-tests-only")
 os.environ.setdefault("CACHE_DIR", "/tmp/barbican-ui-test-cache")
 os.environ.setdefault("BARBICAN_ENDPOINT_AUTODISCOVERY", "false")
 os.environ.setdefault("OS_BARBICAN_ENDPOINT", "http://barbican.test")
+os.environ.setdefault("SESSION_COOKIE_SECURE", "false")
+os.environ.setdefault("SESSION_BIND_IP", "false")
 
 from app import create_app
 
@@ -91,6 +93,7 @@ def auth_session(client):
             "user_id": "user456",
             "user_name": "testuser",
             "barbican_endpoint": "http://barbican.test",
+            "client_ip": "127.0.0.1",
             "catalog": [],
         }
     return client

@@ -6,7 +6,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app import barbican
 from app.barbican import BarbicanError
-from app.routes.helpers import get_auth, login_required, _extract_id
+from app.routes.helpers import get_auth, login_required, _extract_id, validate_resource_id, safe_int
 
 orders_bp = Blueprint("orders", __name__, url_prefix="/orders")
 
@@ -15,7 +15,7 @@ orders_bp = Blueprint("orders", __name__, url_prefix="/orders")
 @login_required
 def list_orders():
     auth = get_auth()
-    page = int(request.args.get("page", 1))
+    page = safe_int(request.args.get("page", "1"))
     limit = 20
     offset = (page - 1) * limit
 
@@ -84,6 +84,7 @@ def create_order():
 @orders_bp.route("/<order_id>")
 @login_required
 def get_order(order_id: str):
+    validate_resource_id(order_id)
     auth = get_auth()
     try:
         order = barbican.order_get(
@@ -103,6 +104,7 @@ def get_order(order_id: str):
 @orders_bp.route("/<order_id>/delete", methods=["POST"])
 @login_required
 def delete_order(order_id: str):
+    validate_resource_id(order_id)
     auth = get_auth()
     try:
         barbican.order_delete(

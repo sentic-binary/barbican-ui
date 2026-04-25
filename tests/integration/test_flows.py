@@ -93,7 +93,7 @@ def test_full_secret_lifecycle(client):
     assert resp.status_code == 302
 
     # Logout
-    resp = client.get("/logout", follow_redirects=False)
+    resp = client.post("/logout", follow_redirects=False)
     assert resp.status_code == 302
 
 

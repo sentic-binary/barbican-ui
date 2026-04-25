@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+import re
 from functools import wraps
 from typing import Any
 
-from flask import redirect, request, session, url_for, flash
+from flask import abort, redirect, request, session, url_for, flash
 
 from app.auth import AuthToken
 from app.config import Config
+
+# Valid UUID pattern for resource IDs
+_UUID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}$"
+    r"|^[a-zA-Z0-9_-]+$"
+)
 
 
 def get_auth() -> AuthToken | None:
@@ -76,3 +83,20 @@ def _extract_id(href: str) -> str:
     """Extract UUID from a Barbican href like https://host/v1/secrets/UUID."""
     return href.rstrip("/").rsplit("/", 1)[-1] if href else ""
 
+
+def validate_resource_id(resource_id: str) -> str:
+    """Validate that a resource ID looks safe (no path traversal)."""
+    if not resource_id or not _UUID_RE.match(resource_id):
+        abort(400, description="Invalid resource ID")
+    if "/" in resource_id or ".." in resource_id:
+        abort(400, description="Invalid resource ID")
+    return resource_id
+
+
+def safe_int(value: str, default: int = 1, minimum: int = 1) -> int:
+    """Safely parse an integer from a string, returning default on failure."""
+    try:
+        result = int(value)
+        return max(result, minimum)
+    except (ValueError, TypeError):
+        return default

@@ -170,21 +170,18 @@ def secret_get_payload(
     secret_id: str,
     accept: str = "text/plain",
 ) -> str:
-    """GET /v1/secrets/{id}/payload — get secret payload."""
-    ck = _cache_key(project_id, f"secrets:{secret_id}:payload:{accept}")
-    cached = cache_get(ck)
-    if cached is not None:
-        return cached
+    """GET /v1/secrets/{id}/payload — get secret payload.
 
+    NOTE: Payloads are intentionally NOT cached to avoid storing
+    sensitive plaintext data on disk.
+    """
     resp = requests.get(
         _url(endpoint, f"v1/secrets/{secret_id}/payload"),
         headers={"X-Auth-Token": token, "Accept": accept},
         timeout=_TIMEOUT,
     )
     _check(resp)
-    data = resp.text
-    cache_set(ck, data)
-    return data
+    return resp.text
 
 
 def secret_delete(
