@@ -1,8 +1,11 @@
 name: Release
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      tag_name:
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -54,7 +57,7 @@ jobs:
 
       - name: Extract version from tag
         id: version
-        run: echo "VERSION=${{ github.event.release.tag_name }}" | sed 's/VERSION=v/VERSION=/' >> "$GITHUB_OUTPUT"
+        run: echo "VERSION=${{ inputs.tag_name || github.event.release.tag_name }}" | sed 's/VERSION=v/VERSION=/' >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -89,7 +92,7 @@ jobs:
 
       - name: Extract version from tag
         id: version
-        run: echo "VERSION=${{ github.event.release.tag_name }}" | sed 's/VERSION=v/VERSION=/' >> "$GITHUB_OUTPUT"
+        run: echo "VERSION=${{ inputs.tag_name || github.event.release.tag_name }}" | sed 's/VERSION=v/VERSION=/' >> "$GITHUB_OUTPUT"
 
       - name: Set up Helm
         uses: azure/setup-helm@v4

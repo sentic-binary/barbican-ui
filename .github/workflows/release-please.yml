@@ -11,13 +11,27 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
     steps:
       - uses: googleapis/release-please-action@v4
+        id: rp
         with:
           release-type: simple
           # release-please will:
           # 1. Analyse conventional commits since last release
           # 2. Open/update a PR with CHANGELOG.md + version bump
           # 3. When that PR is merged, create a git tag (v*) + GitHub Release
-          # 4. The git tag triggers .github/workflows/release.yml
+          # 4. The release_created output triggers the downstream jobs
 
+  # ── Trigger the release pipeline when a release is created ─────────
+  trigger-release:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    uses: ./.github/workflows/release.yml
+    permissions:
+      contents: write
+      packages: write
+    with:
+      tag_name: ${{ needs.release-please.outputs.tag_name }}
