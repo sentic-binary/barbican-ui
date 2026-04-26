@@ -1221,3 +1221,155 @@ def test_security_headers(client):
     assert resp.headers.get("X-Frame-Options") == "DENY"
     assert "Content-Security-Policy" in resp.headers
 
+
+# ── Secret Metadata routes ──────────────────────────────────────────
+
+
+@responses.activate
+def test_secret_detail_shows_user_metadata(auth_session):
+    """GET /secrets/<id> fetches and displays user metadata."""
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/s1", json=SAMPLE_SECRET)
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/s1/payload", body="secret-val")
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/s1/metadata", json={"env": "prod", "team": "backend"})
+    resp = auth_session.get("/secrets/s1")
+    assert resp.status_code == 200
+    assert b"User Metadata" in resp.data
+    assert b"env" in resp.data
+    assert b"prod" in resp.data
+
+
+@responses.activate
+def test_secret_detail_metadata_fetch_error(auth_session):
+    """If metadata fetch fails, page still renders."""
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/s2", json=SAMPLE_SECRET)
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/s2/payload", body="secret-val")
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/s2/metadata", json={"title": "Not Found"}, status=404)
+    resp = auth_session.get("/secrets/s2")
+    assert resp.status_code == 200
+    assert b"No user metadata" in resp.data
+
+
+@responses.activate
+def test_add_metadata(auth_session):
+    responses.add(responses.POST, f"{BARBICAN}/v1/secrets/s1/metadata", json={"key": "env", "value": "prod"}, status=201)
+    resp = auth_session.post("/secrets/s1/metadata/add", data={
+        "meta_key": "env", "meta_value": "prod",
+    }, follow_redirects=False)
+    assert resp.status_code == 302
+    assert "/secrets/s1" in resp.headers["Location"]
+
+
+@responses.activate
+def test_add_metadata_empty_key(auth_session):
+    resp = auth_session.post("/secrets/s1/metadata/add", data={
+        "meta_key": "", "meta_value": "val",
+    }, follow_redirects=False)
+    assert resp.status_code == 302
+
+
+@responses.activate
+def test_delete_metadata(auth_session):
+    responses.add(responses.DELETE, f"{BARBICAN}/v1/secrets/s1/metadata/env", status=204)
+    resp = auth_session.post("/secrets/s1/metadata/delete", data={
+        "meta_key": "env",
+    }, follow_redirects=False)
+    assert resp.status_code == 302
+
+
+@responses.activate
+def test_delete_metadata_empty_key(auth_session):
+    resp = auth_session.post("/secrets/s1/metadata/delete", data={
+        "meta_key": "",
+    }, follow_redirects=False)
+    assert resp.status_code == 302
+
+
+# ── Clone Secret routes ─────────────────────────────────────────────
+
+
+@responses.activate
+def test_clone_secret_get(auth_session):
+    """GET /secrets/create?clone_from=s1 pre-fills form from existing secret."""
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets", json={"secrets": [SAMPLE_SECRET], "total": 1})
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/sec-uuid-1", json=SAMPLE_SECRET)
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/sec-uuid-1/payload", body="secret-val")
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/sec-uuid-1/metadata", json={"env": "prod"})
+    resp = auth_session.get("/secrets/create?clone_from=sec-uuid-1")
+    assert resp.status_code == 200
+    assert b"Clone Secret" in resp.data
+    assert b"test-secret-copy" in resp.data
+    assert b"secret-val" in resp.data
+
+
+@responses.activate
+def test_clone_secret_with_path(auth_session):
+    """Clone a secret with path separator in name."""
+    secret_with_path = {**SAMPLE_SECRET, "name": "prod/db/password", "secret_ref": "http://barbican.test/v1/secrets/path-uuid-1"}
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets", json={"secrets": [], "total": 0})
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/path-uuid-1", json=secret_with_path)
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/path-uuid-1/payload", body="pw123")
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/path-uuid-1/metadata", json={})
+    resp = auth_session.get("/secrets/create?clone_from=path-uuid-1")
+    assert resp.status_code == 200
+    assert b"password-copy" in resp.data
+    assert b"prod/db" in resp.data
+
+
+@responses.activate
+def test_clone_secret_invalid_id(auth_session):
+    """Clone with bad ID still renders create page."""
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets", json={"secrets": [], "total": 0})
+    resp = auth_session.get("/secrets/create?clone_from=../bad")
+    assert resp.status_code == 200
+    assert b"Create Secret" in resp.data
+
+
+# ── Clone Container routes ──────────────────────────────────────────
+
+
+@responses.activate
+def test_clone_container_get(auth_session):
+    """GET /containers/create?clone_from=c1 pre-fills form."""
+    container_with_refs = {
+        **SAMPLE_CONTAINER,
+        "secret_refs": [{"name": "key", "secret_ref": f"{BARBICAN}/v1/secrets/s1"}],
+    }
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets", json={"secrets": [SAMPLE_SECRET], "total": 1})
+    responses.add(responses.GET, f"{BARBICAN}/v1/containers/ctr-uuid-1", json=container_with_refs)
+    resp = auth_session.get("/containers/create?clone_from=ctr-uuid-1")
+    assert resp.status_code == 200
+    assert b"Clone Container" in resp.data
+    assert b"test-container-copy" in resp.data
+
+
+@responses.activate
+def test_clone_container_invalid_id(auth_session):
+    """Clone with bad ID still renders create page."""
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets", json={"secrets": [], "total": 0})
+    resp = auth_session.get("/containers/create?clone_from=../bad")
+    assert resp.status_code == 200
+    assert b"Create Container" in resp.data
+
+
+# ── Immutability info in detail views ───────────────────────────────
+
+
+@responses.activate
+def test_secret_detail_shows_immutability_info(auth_session):
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/s1", json=SAMPLE_SECRET)
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/s1/payload", body="val")
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/s1/metadata", json={})
+    resp = auth_session.get("/secrets/s1")
+    assert b"Immutable resource" in resp.data
+    assert b"Clone" in resp.data
+
+
+@responses.activate
+def test_container_detail_shows_immutability_info(auth_session):
+    responses.add(responses.GET, f"{BARBICAN}/v1/containers/c1", json=SAMPLE_CONTAINER)
+    responses.add(responses.GET, f"{BARBICAN}/v1/containers/c1/consumers", json={"consumers": [], "total": 0})
+    resp = auth_session.get("/containers/c1")
+    assert b"Immutable resource" in resp.data
+    assert b"Clone" in resp.data
+
+

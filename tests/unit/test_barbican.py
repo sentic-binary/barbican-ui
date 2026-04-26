@@ -7,6 +7,8 @@ from app.barbican import (
     BarbicanError,
     secret_store, secret_list, secret_get, secret_get_payload,
     secret_delete, secret_update,
+    secret_metadata_get, secret_metadata_set, secret_metadata_update,
+    secret_metadata_delete,
     container_create, container_list, container_get, container_delete,
     consumer_create, consumer_list, consumer_delete,
     order_create, order_list, order_get, order_delete,
@@ -76,6 +78,46 @@ def test_secret_store_error():
     responses.add(responses.POST, f"{EP}/v1/secrets", json={"title": "Bad"}, status=400)
     with pytest.raises(BarbicanError):
         secret_store(EP, TOKEN, PID, name="x", payload="y")
+
+
+# ── Secret Metadata ────────────────────────────────────────────────
+
+@responses.activate
+def test_secret_metadata_get():
+    responses.add(responses.GET, f"{EP}/v1/secrets/s1/metadata", json={"env": "prod", "team": "backend"})
+    result = secret_metadata_get(EP, TOKEN, PID, "s1")
+    assert result["env"] == "prod"
+    assert result["team"] == "backend"
+    # Second call should hit cache
+    result2 = secret_metadata_get(EP, TOKEN, PID, "s1")
+    assert result2["env"] == "prod"
+    assert len(responses.calls) == 1
+
+
+@responses.activate
+def test_secret_metadata_set():
+    responses.add(responses.PUT, f"{EP}/v1/secrets/s1/metadata", json={"env": "staging"})
+    result = secret_metadata_set(EP, TOKEN, PID, "s1", metadata={"env": "staging"})
+    assert result["env"] == "staging"
+
+
+@responses.activate
+def test_secret_metadata_update_key():
+    responses.add(responses.POST, f"{EP}/v1/secrets/s1/metadata", json={"key": "env", "value": "prod"}, status=201)
+    secret_metadata_update(EP, TOKEN, PID, "s1", key="env", value="prod")
+
+
+@responses.activate
+def test_secret_metadata_delete_key():
+    responses.add(responses.DELETE, f"{EP}/v1/secrets/s1/metadata/env", status=204)
+    secret_metadata_delete(EP, TOKEN, PID, "s1", key="env")
+
+
+@responses.activate
+def test_secret_metadata_get_error():
+    responses.add(responses.GET, f"{EP}/v1/secrets/s1/metadata", json={"title": "Not Found"}, status=404)
+    with pytest.raises(BarbicanError):
+        secret_metadata_get(EP, TOKEN, PID, "s1")
 
 
 # ── Containers ─────────────────────────────────────────────────────
