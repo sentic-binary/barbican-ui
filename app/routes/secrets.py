@@ -133,53 +133,60 @@ def create_secret():
         if source_id:
             try:
                 validate_resource_id(source_id)
+            except Exception:
+                flash("Invalid source secret ID.", "danger")
+                return redirect(url_for("secrets.list_secrets"))
+
+            try:
                 meta = barbican.secret_get(
                     auth.barbican_endpoint, auth.token, auth.project_id, source_id
                 )
-                original_name = meta.get("name", "") or ""
-                # Split into path + short name
-                if PATH_SEP in original_name:
-                    clone_path, clone_short = original_name.rsplit(PATH_SEP, 1)
-                    path_prefix = clone_path
-                else:
-                    clone_short = original_name
+            except BarbicanError as exc:
+                flash(f"Cannot load source secret: {safe_error_message(exc)}", "danger")
+                return redirect(url_for("secrets.list_secrets"))
 
-                if is_replace:
-                    clone_data["name"] = clone_short
-                    clone_data["replace_id"] = source_id
-                else:
-                    clone_data["name"] = clone_short + "-copy" if clone_short else ""
+            original_name = meta.get("name", "") or ""
+            # Split into path + short name
+            if PATH_SEP in original_name:
+                clone_path, clone_short = original_name.rsplit(PATH_SEP, 1)
+                path_prefix = clone_path
+            else:
+                clone_short = original_name
 
-                clone_data["secret_type"] = meta.get("secret_type", "opaque")
-                clone_data["algorithm"] = meta.get("algorithm", "") or ""
-                clone_data["bit_length"] = meta.get("bit_length", "") or ""
-                clone_data["mode"] = meta.get("mode", "") or ""
-                clone_data["expiration"] = meta.get("expiration", "") or ""
+            if is_replace:
+                clone_data["name"] = clone_short
+                clone_data["replace_id"] = source_id
+            else:
+                clone_data["name"] = clone_short + "-copy" if clone_short else ""
 
-                # Try to fetch payload
-                if meta.get("status") == "ACTIVE":
-                    try:
-                        ct = meta.get("content_types", {})
-                        accept = ct.get("default", "text/plain") if ct else "text/plain"
-                        clone_data["payload"] = barbican.secret_get_payload(
-                            auth.barbican_endpoint, auth.token, auth.project_id,
-                            source_id, accept=accept,
-                        )
-                        clone_data["payload_content_type"] = accept
-                    except BarbicanError:
-                        clone_data["payload"] = ""
-                        clone_data["payload_content_type"] = "text/plain"
+            clone_data["secret_type"] = meta.get("secret_type", "opaque")
+            clone_data["algorithm"] = meta.get("algorithm", "") or ""
+            clone_data["bit_length"] = meta.get("bit_length", "") or ""
+            clone_data["mode"] = meta.get("mode", "") or ""
+            clone_data["expiration"] = meta.get("expiration", "") or ""
 
-                # Try to fetch user metadata
+            # Try to fetch payload
+            if meta.get("status") == "ACTIVE":
                 try:
-                    user_meta = barbican.secret_metadata_get(
-                        auth.barbican_endpoint, auth.token, auth.project_id, source_id
+                    ct = meta.get("content_types", {})
+                    accept = ct.get("default", "text/plain") if ct else "text/plain"
+                    clone_data["payload"] = barbican.secret_get_payload(
+                        auth.barbican_endpoint, auth.token, auth.project_id,
+                        source_id, accept=accept,
                     )
-                    clone_data["user_metadata"] = user_meta
+                    clone_data["payload_content_type"] = accept
                 except BarbicanError:
-                    clone_data["user_metadata"] = {}
-            except (BarbicanError, ValueError, Exception):
-                pass
+                    clone_data["payload"] = ""
+                    clone_data["payload_content_type"] = "text/plain"
+
+            # Try to fetch user metadata
+            try:
+                user_meta = barbican.secret_metadata_get(
+                    auth.barbican_endpoint, auth.token, auth.project_id, source_id
+                )
+                clone_data["user_metadata"] = user_meta
+            except BarbicanError:
+                clone_data["user_metadata"] = {}
 
         return render_template(
             "secrets/create.html", auth=auth,
@@ -393,3 +400,4 @@ def delete_metadata(secret_id: str):
     except BarbicanError as exc:
         flash(safe_error_message(exc), "danger")
     return redirect(url_for("secrets.get_secret", secret_id=secret_id))
+

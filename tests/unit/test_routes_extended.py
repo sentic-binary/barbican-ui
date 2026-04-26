@@ -1317,11 +1317,9 @@ def test_clone_secret_with_path(auth_session):
 
 @responses.activate
 def test_clone_secret_invalid_id(auth_session):
-    """Clone with bad ID still renders create page."""
-    responses.add(responses.GET, f"{BARBICAN}/v1/secrets", json={"secrets": [], "total": 0})
+    """Clone with bad ID redirects to secret list."""
     resp = auth_session.get("/secrets/create?clone_from=../bad")
-    assert resp.status_code == 200
-    assert b"Create Secret" in resp.data
+    assert resp.status_code == 302
 
 
 # ── Clone Container routes ──────────────────────────────────────────
@@ -1344,11 +1342,9 @@ def test_clone_container_get(auth_session):
 
 @responses.activate
 def test_clone_container_invalid_id(auth_session):
-    """Clone with bad ID still renders create page."""
-    responses.add(responses.GET, f"{BARBICAN}/v1/secrets", json={"secrets": [], "total": 0})
+    """Clone with bad ID redirects to container list."""
     resp = auth_session.get("/containers/create?clone_from=../bad")
-    assert resp.status_code == 200
-    assert b"Create Container" in resp.data
+    assert resp.status_code == 302
 
 
 # ── Immutability info in detail views ───────────────────────────────

@@ -69,6 +69,10 @@ def create_container():
         if source_id:
             try:
                 validate_resource_id(source_id)
+            except Exception:
+                flash("Invalid source container ID.", "danger")
+                return redirect(url_for("containers.list_containers"))
+            try:
                 ctr = barbican.container_get(
                     auth.barbican_endpoint, auth.token, auth.project_id, source_id
                 )
@@ -86,8 +90,9 @@ def create_container():
                         "secret_id": _extract_id(sr.get("secret_ref", "")),
                     })
                 clone_data["secret_refs"] = clone_refs
-            except (BarbicanError, ValueError, Exception):
-                pass
+            except BarbicanError as exc:
+                flash(f"Cannot load source container: {safe_error_message(exc)}", "danger")
+                return redirect(url_for("containers.list_containers"))
 
         return render_template("containers/create.html", auth=auth, secrets=secrets, clone=clone_data)
 
@@ -182,3 +187,4 @@ def delete_container(container_id: str):
     except BarbicanError as exc:
         flash(safe_error_message(exc), "danger")
     return redirect(url_for("containers.list_containers"))
+
