@@ -89,6 +89,57 @@
           <tr><td><code>status</code></td><td><span class="badge bg-success">ACTIVE</span> (has payload) or <span class="badge bg-secondary">PENDING</span> (no payload yet).</td></tr>
         </tbody>
       </table>
+
+      <h5>User Metadata</h5>
+      <p>
+        Each secret supports <strong>user metadata</strong> — editable key-value tags that can be added,
+        modified, and removed at any time. Unlike core metadata (name, type, algorithm), user metadata is
+        <strong>mutable</strong>. Use it for labels, environment tags, ownership info, or any custom annotations.
+      </p>
+      <p>
+        <strong>Where to find:</strong> Secret detail page → <strong>User Metadata</strong> card → click <strong>Add</strong>.
+      </p>
+
+      <h5>Clone & Replace</h5>
+      <p>
+        Since Barbican secrets are <strong>immutable</strong> (core metadata and payload cannot be changed after creation),
+        this UI provides two workflows for "editing":
+      </p>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <div class="card h-100 border-warning">
+            <div class="card-header text-warning"><i class="bi bi-pencil-square"></i> Replace</div>
+            <div class="card-body">
+              <p>Deletes the original secret and creates a <strong>new one with the same name</strong>.</p>
+              <ul class="mb-0">
+                <li>Name and path are <strong>locked</strong> (greyed out)</li>
+                <li>Original secret is <strong>deleted</strong></li>
+                <li>New secret gets a <strong>new ID</strong></li>
+                <li>Effectively "edits" the secret</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card h-100 border-primary">
+            <div class="card-header text-primary"><i class="bi bi-copy"></i> Clone</div>
+            <div class="card-body">
+              <p>Creates a <strong>new secret with a different name</strong> (<code>-copy</code> suffix), pre-filled with all data from the original.</p>
+              <ul class="mb-0">
+                <li>Name and path are editable</li>
+                <li>Original secret is <strong>kept</strong></li>
+                <li>Useful for creating variants or backups</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Replace changes the secret ID.</strong> Any external systems referencing the old secret ID
+        (e.g. container references, External Secrets Operator configs) will need to be updated.
+        If your references use secret <em>names</em> rather than IDs, this is not an issue.
+      </div>
     </section>
 
     {# ── Secret Types ──────────────────────────────────────────── #}

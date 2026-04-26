@@ -41,7 +41,7 @@ This document maps every `openstack secret` CLI command to its corresponding Bar
 | **Disk Cache** | Responses cached to minimize API calls, with automatic invalidation on mutations |
 | **Export / Import** | Migrate secrets and containers between Barbican instances, regions, or projects via versioned JSON files |
 | **Secret User Metadata** | Editable key-value tags on secrets — the only mutable data in Barbican. Add, view, and remove metadata inline from the secret detail page |
-| **Clone / Recreate** | Duplicate any secret or container with one click. Pre-fills the creation form with all existing data (metadata, payload, secret refs). Recommended workflow for "editing" immutable resources |
+| **Clone & Replace** | **Replace**: delete-and-recreate a secret/container with the same name (name locked, edit everything else — effectively an "edit" operation). **Clone**: duplicate with `-copy` suffix, keeping the original. Both pre-fill all data including payload, metadata, and secret references |
 
 ## Container Types Supported
 
@@ -58,4 +58,3 @@ This document maps every `openstack secret` CLI command to its corresponding Bar
 | `key` | Generate a symmetric key (AES, etc.) |
 | `asymmetric` | Generate an asymmetric key pair (RSA, etc.) |
 | `certificate` | Request a certificate |
-

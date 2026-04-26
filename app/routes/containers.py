@@ -60,16 +60,24 @@ def create_container():
         except BarbicanError:
             secrets = []
 
-        # Clone: pre-fill from existing container
+        # Clone/Replace: pre-fill from existing container
         clone_data = {}
         clone_from = request.args.get("clone_from", "").strip()
-        if clone_from:
+        replace_for = request.args.get("replace_for", "").strip()
+        source_id = clone_from or replace_for
+        is_replace = bool(replace_for)
+        if source_id:
             try:
-                validate_resource_id(clone_from)
+                validate_resource_id(source_id)
                 ctr = barbican.container_get(
-                    auth.barbican_endpoint, auth.token, auth.project_id, clone_from
+                    auth.barbican_endpoint, auth.token, auth.project_id, source_id
                 )
-                clone_data["name"] = (ctr.get("name", "") or "") + "-copy"
+                original_name = ctr.get("name", "") or ""
+                if is_replace:
+                    clone_data["name"] = original_name
+                    clone_data["replace_id"] = source_id
+                else:
+                    clone_data["name"] = original_name + "-copy"
                 clone_data["type"] = ctr.get("type", "generic")
                 clone_refs = []
                 for sr in ctr.get("secret_refs", []):
@@ -87,6 +95,7 @@ def create_container():
     container_type = request.form.get("type", "generic")
     ref_names = request.form.getlist("ref_name")
     ref_ids = request.form.getlist("ref_id")
+    replace_id = request.form.get("replace_id", "").strip()
 
     secret_refs = []
     for rn, ri in zip(ref_names, ref_ids):
@@ -98,13 +107,27 @@ def create_container():
                 "secret_ref": f"{auth.barbican_endpoint}/v1/secrets/{ri}",
             })
 
+    # Replace mode: delete the old container first
+    if replace_id:
+        try:
+            validate_resource_id(replace_id)
+            barbican.container_delete(
+                auth.barbican_endpoint, auth.token, auth.project_id, replace_id
+            )
+        except BarbicanError as exc:
+            flash(f"Failed to delete original container: {safe_error_message(exc)}", "danger")
+            return redirect(url_for("containers.get_container", container_id=replace_id))
+
     try:
         result = barbican.container_create(
             auth.barbican_endpoint, auth.token, auth.project_id,
             name=name, container_type=container_type, secret_refs=secret_refs,
         )
         cid = _extract_id(result.get("container_ref", ""))
-        flash("Container created.", "success")
+        if replace_id:
+            flash("Container replaced.", "success")
+        else:
+            flash("Container created.", "success")
         return redirect(url_for("containers.get_container", container_id=cid))
     except BarbicanError as exc:
         flash(safe_error_message(exc), "danger")
@@ -159,4 +182,3 @@ def delete_container(container_id: str):
     except BarbicanError as exc:
         flash(safe_error_message(exc), "danger")
     return redirect(url_for("containers.list_containers"))
-

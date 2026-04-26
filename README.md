@@ -28,7 +28,9 @@ The primary goal of this project is to leverage Barbican as a **simple, zero-ins
   - **Key-Value** — dynamic key-value pairs stored as JSON
   - **JSON** — graphical tree/code/form editor powered by JSONEditor (similar to HashiCorp Vault)
 - **Secret User Metadata** — editable key-value tags on secrets (the only mutable data in Barbican), with inline add/remove
-- **Clone / Recreate** — duplicate any secret or container with one click; pre-fills the creation form with all existing data including payload, metadata, and secret references — the recommended workflow for "editing" immutable Barbican resources
+- **Clone & Replace** — since Barbican resources are immutable, this UI provides two workflows for "editing":
+  - **Replace** — deletes the original secret/container and creates a new one with the **same name** (name and path locked, only payload and settings editable). Effectively an "edit" operation
+  - **Clone** — creates a copy with a `-copy` suffix, keeping the original intact. Pre-fills all data including payload, metadata, and secret references
 - **OpenStack Keystone authentication** — users log in with their own credentials; auto-detect project Name vs ID
 - **Region-aware** — select OpenStack region at login; Barbican endpoint discovered per-region from service catalog
 - **Minimal permissions** — requires only Barbican `creator` role, no admin access
@@ -245,4 +247,3 @@ git push origin v1.2.3
 
 MIT
 
-.

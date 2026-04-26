@@ -1,17 +1,28 @@
 {% extends "base.html" %}
-{% block title %}Create Container — Barbican UI{% endblock %}
+{% block title %}{% if clone and clone.replace_id %}Replace{% elif clone %}Clone{% else %}Create{% endif %} Container — Barbican UI{% endblock %}
 {% block content %}
-<h2><i class="bi bi-plus-circle"></i> {% if clone %}Clone Container{% else %}Create Container{% endif %} <sup><a href="/docs#containers" class="text-muted text-decoration-none"><i class="bi bi-question-circle" style="font-size:.55em"></i></a></sup></h2>
-{% if clone %}
+<h2><i class="bi bi-{% if clone and clone.replace_id %}pencil-square{% elif clone %}copy{% else %}plus-circle{% endif %}"></i> {% if clone and clone.replace_id %}Replace Container{% elif clone %}Clone Container{% else %}Create Container{% endif %} <sup><a href="/docs#containers" class="text-muted text-decoration-none"><i class="bi bi-question-circle" style="font-size:.55em"></i></a></sup></h2>
+{% if clone and clone.replace_id %}
+<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> <strong>Replace mode.</strong> The original container will be <strong>deleted</strong> and a new one created with the same name. The container ID will change.</div>
+{% elif clone %}
 <div class="alert alert-info"><i class="bi bi-info-circle"></i> Pre-filled from existing container. Secret references point to the same secrets.</div>
 {% endif %}
 <hr>
 <form method="POST" action="/containers/create">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% if clone and clone.replace_id %}
+  <input type="hidden" name="replace_id" value="{{ clone.replace_id }}">
+  {% endif %}
   <div class="mb-3">
     <label class="form-label">Name</label>
-    <input type="text" name="name" class="form-control" required placeholder="my-container"
-           value="{{ clone.name if clone else '' }}">
+    <input type="text" name="name"
+           class="form-control{% if clone and clone.replace_id %} bg-light{% endif %}"
+           required placeholder="my-container"
+           value="{{ clone.name if clone else '' }}"
+           {% if clone and clone.replace_id %}readonly{% endif %}>
+    {% if clone and clone.replace_id %}
+    <div class="form-text text-warning">Name is locked in replace mode.</div>
+    {% endif %}
   </div>
   <div class="mb-3">
     <label class="form-label">Type</label>
@@ -67,7 +78,13 @@
   <button type="button" class="btn btn-outline-secondary btn-sm mb-3" id="addRef"><i class="bi bi-plus"></i> Add Reference</button>
 
   <hr>
-  <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {% if clone %}Clone Container{% else %}Create Container{% endif %}</button>
+  {% if clone and clone.replace_id %}
+  <button type="submit" class="btn btn-warning" onclick="return confirm('This will permanently delete the original container and create a new one. Continue?')"><i class="bi bi-pencil-square"></i> Replace Container</button>
+  {% elif clone %}
+  <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Clone Container</button>
+  {% else %}
+  <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Create Container</button>
+  {% endif %}
   <a href="/containers" class="btn btn-secondary">Cancel</a>
 </form>
 
@@ -88,4 +105,3 @@ document.getElementById('refsContainer').addEventListener('click', function(e) {
 });
 </script>
 {% endblock %}
-
