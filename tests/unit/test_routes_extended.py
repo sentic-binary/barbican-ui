@@ -1362,6 +1362,7 @@ def test_secret_detail_shows_immutability_info(auth_session):
     resp = auth_session.get("/secrets/s1")
     assert b"Immutable resource" in resp.data
     assert b"Clone" in resp.data
+    assert b"Replace" in resp.data
 
 
 @responses.activate
@@ -1371,5 +1372,91 @@ def test_container_detail_shows_immutability_info(auth_session):
     resp = auth_session.get("/containers/c1")
     assert b"Immutable resource" in resp.data
     assert b"Clone" in resp.data
+    assert b"Replace" in resp.data
 
 
+# ── Replace Secret routes ────────────────────────────────────────────
+
+
+@responses.activate
+def test_replace_secret_get(auth_session):
+    """GET /secrets/create?replace_for=s1 shows replace mode with locked name."""
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets", json={"secrets": [SAMPLE_SECRET], "total": 1})
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/sec-uuid-1", json=SAMPLE_SECRET)
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/sec-uuid-1/payload", body="secret-val")
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets/sec-uuid-1/metadata", json={})
+    resp = auth_session.get("/secrets/create?replace_for=sec-uuid-1")
+    assert resp.status_code == 200
+    assert b"Replace Secret" in resp.data
+    assert b"test-secret" in resp.data
+    # Name should NOT have -copy suffix
+    assert b"test-secret-copy" not in resp.data
+    # Should have replace_id hidden field
+    assert b"replace_id" in resp.data
+    # Name field should be readonly
+    assert b"readonly" in resp.data
+
+
+@responses.activate
+def test_replace_secret_post(auth_session):
+    """POST /secrets/create with replace_id deletes old and creates new."""
+    responses.add(responses.DELETE, f"{BARBICAN}/v1/secrets/old-id", status=204)
+    responses.add(
+        responses.POST, f"{BARBICAN}/v1/secrets",
+        json={"secret_ref": f"{BARBICAN}/v1/secrets/new-id"},
+        status=201,
+    )
+    resp = auth_session.post("/secrets/create", data={
+        "name": "test-secret", "secret_type": "opaque", "payload_mode": "simple",
+        "payload": "new-value", "payload_content_type": "text/plain",
+        "replace_id": "old-id",
+    }, follow_redirects=False)
+    assert resp.status_code == 302
+    assert "/secrets/new-id" in resp.headers["Location"]
+    # Verify delete was called first
+    assert responses.calls[0].request.method == "DELETE"
+    assert "old-id" in responses.calls[0].request.url
+
+
+@responses.activate
+def test_replace_secret_delete_fails(auth_session):
+    """If delete fails during replace, redirect back to original secret."""
+    responses.add(responses.DELETE, f"{BARBICAN}/v1/secrets/old-id", json={"title": "Forbidden"}, status=403)
+    resp = auth_session.post("/secrets/create", data={
+        "name": "test-secret", "secret_type": "opaque", "payload_mode": "simple",
+        "payload": "new-value", "payload_content_type": "text/plain",
+        "replace_id": "old-id",
+    }, follow_redirects=False)
+    assert resp.status_code == 302
+    assert "/secrets/old-id" in resp.headers["Location"]
+
+
+@responses.activate
+def test_replace_container_get(auth_session):
+    """GET /containers/create?replace_for=c1 shows replace mode."""
+    responses.add(responses.GET, f"{BARBICAN}/v1/secrets", json={"secrets": [], "total": 0})
+    responses.add(responses.GET, f"{BARBICAN}/v1/containers/ctr-uuid-1", json=SAMPLE_CONTAINER)
+    resp = auth_session.get("/containers/create?replace_for=ctr-uuid-1")
+    assert resp.status_code == 200
+    assert b"Replace Container" in resp.data
+    assert b"test-container" in resp.data
+    assert b"test-container-copy" not in resp.data
+    assert b"replace_id" in resp.data
+    assert b"readonly" in resp.data
+
+
+@responses.activate
+def test_replace_container_post(auth_session):
+    """POST /containers/create with replace_id deletes old and creates new."""
+    responses.add(responses.DELETE, f"{BARBICAN}/v1/containers/old-cid", status=204)
+    responses.add(
+        responses.POST, f"{BARBICAN}/v1/containers",
+        json={"container_ref": f"{BARBICAN}/v1/containers/new-cid"},
+        status=201,
+    )
+    resp = auth_session.post("/containers/create", data={
+        "name": "test-container", "type": "generic",
+        "replace_id": "old-cid",
+    }, follow_redirects=False)
+    assert resp.status_code == 302
+    assert "/containers/new-cid" in resp.headers["Location"]

@@ -114,6 +114,9 @@ def create_secret():
     if request.method == "GET":
         path_prefix = request.args.get("path", "").strip().strip(PATH_SEP)
         clone_from = request.args.get("clone_from", "").strip()
+        replace_for = request.args.get("replace_for", "").strip()
+        source_id = clone_from or replace_for
+        is_replace = bool(replace_for)
 
         # Fetch folder tree for autocomplete
         try:
@@ -125,13 +128,13 @@ def create_secret():
             all_secrets = []
         tree = _build_folder_tree(all_secrets)
 
-        # Clone: pre-fill from existing secret
+        # Clone/Replace: pre-fill from existing secret
         clone_data = {}
-        if clone_from:
+        if source_id:
             try:
-                validate_resource_id(clone_from)
+                validate_resource_id(source_id)
                 meta = barbican.secret_get(
-                    auth.barbican_endpoint, auth.token, auth.project_id, clone_from
+                    auth.barbican_endpoint, auth.token, auth.project_id, source_id
                 )
                 original_name = meta.get("name", "") or ""
                 # Split into path + short name
@@ -140,7 +143,13 @@ def create_secret():
                     path_prefix = clone_path
                 else:
                     clone_short = original_name
-                clone_data["name"] = clone_short + "-copy" if clone_short else ""
+
+                if is_replace:
+                    clone_data["name"] = clone_short
+                    clone_data["replace_id"] = source_id
+                else:
+                    clone_data["name"] = clone_short + "-copy" if clone_short else ""
+
                 clone_data["secret_type"] = meta.get("secret_type", "opaque")
                 clone_data["algorithm"] = meta.get("algorithm", "") or ""
                 clone_data["bit_length"] = meta.get("bit_length", "") or ""
@@ -154,7 +163,7 @@ def create_secret():
                         accept = ct.get("default", "text/plain") if ct else "text/plain"
                         clone_data["payload"] = barbican.secret_get_payload(
                             auth.barbican_endpoint, auth.token, auth.project_id,
-                            clone_from, accept=accept,
+                            source_id, accept=accept,
                         )
                         clone_data["payload_content_type"] = accept
                     except BarbicanError:
@@ -164,7 +173,7 @@ def create_secret():
                 # Try to fetch user metadata
                 try:
                     user_meta = barbican.secret_metadata_get(
-                        auth.barbican_endpoint, auth.token, auth.project_id, clone_from
+                        auth.barbican_endpoint, auth.token, auth.project_id, source_id
                     )
                     clone_data["user_metadata"] = user_meta
                 except BarbicanError:
@@ -192,6 +201,7 @@ def create_secret():
     bit_length = request.form.get("bit_length", "")
     mode = request.form.get("mode", "").strip()
     expiration = request.form.get("expiration", "").strip()
+    replace_id = request.form.get("replace_id", "").strip()
 
     if payload_mode == "kv":
         keys = request.form.getlist("kv_key")
@@ -206,6 +216,17 @@ def create_secret():
         payload = request.form.get("payload", "")
         content_type = request.form.get("payload_content_type", "text/plain")
 
+    # Replace mode: delete the old secret first
+    if replace_id:
+        try:
+            validate_resource_id(replace_id)
+            barbican.secret_delete(
+                auth.barbican_endpoint, auth.token, auth.project_id, replace_id
+            )
+        except BarbicanError as exc:
+            flash(f"Failed to delete original secret: {safe_error_message(exc)}", "danger")
+            return redirect(url_for("secrets.get_secret", secret_id=replace_id))
+
     try:
         result = barbican.secret_store(
             auth.barbican_endpoint, auth.token, auth.project_id,
@@ -215,7 +236,10 @@ def create_secret():
             mode=mode, expiration=expiration,
         )
         secret_id = _extract_id(result.get("secret_ref", ""))
-        flash("Secret created successfully.", "success")
+        if replace_id:
+            flash("Secret replaced successfully.", "success")
+        else:
+            flash("Secret created successfully.", "success")
         return redirect(url_for("secrets.get_secret", secret_id=secret_id))
     except BarbicanError as exc:
         flash(safe_error_message(exc), "danger")
@@ -369,5 +393,3 @@ def delete_metadata(secret_id: str):
     except BarbicanError as exc:
         flash(safe_error_message(exc), "danger")
     return redirect(url_for("secrets.get_secret", secret_id=secret_id))
-
-

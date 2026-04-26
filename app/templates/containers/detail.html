@@ -5,6 +5,10 @@
   <h2><i class="bi bi-archive"></i> {{ container.name or '(unnamed)' }}</h2>
   <div>
     <a href="/containers" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+    <a href="/containers/create?replace_for={{ container.id }}" class="btn btn-outline-warning btn-sm"
+       title="Delete this container and create a new one with the same name">
+      <i class="bi bi-pencil-square"></i> Replace
+    </a>
     <a href="/containers/create?clone_from={{ container.id }}" class="btn btn-outline-primary btn-sm">
       <i class="bi bi-copy"></i> Clone
     </a>
@@ -32,7 +36,8 @@
 <div class="alert alert-info mb-4">
   <i class="bi bi-info-circle"></i>
   <strong>Immutable resource.</strong> Barbican containers are immutable — name, type, and secret references cannot be changed after creation.
-  Use <a href="/containers/create?clone_from={{ container.id }}" class="alert-link">Clone</a> to recreate this container with modified settings.
+  Use <a href="/containers/create?replace_for={{ container.id }}" class="alert-link">Replace</a> to edit (deletes original and creates new),
+  or <a href="/containers/create?clone_from={{ container.id }}" class="alert-link">Clone</a> to create a copy.
 </div>
 
 <div class="card mb-4">
@@ -108,4 +113,3 @@
   </div>
 </div>
 {% endblock %}
-
