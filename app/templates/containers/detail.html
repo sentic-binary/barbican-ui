@@ -5,6 +5,9 @@
   <h2><i class="bi bi-archive"></i> {{ container.name or '(unnamed)' }}</h2>
   <div>
     <a href="/containers" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+    <a href="/containers/create?clone_from={{ container.id }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-copy"></i> Clone
+    </a>
     <form method="POST" action="/containers/{{ container.id }}/delete" class="d-inline"
           onsubmit="return confirm('Delete this container?')">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -24,6 +27,12 @@
       <tr><th>Updated</th><td>{{ container.updated or '—' }}</td></tr>
     </table>
   </div>
+</div>
+
+<div class="alert alert-info mb-4">
+  <i class="bi bi-info-circle"></i>
+  <strong>Immutable resource.</strong> Barbican containers are immutable — name, type, and secret references cannot be changed after creation.
+  Use <a href="/containers/create?clone_from={{ container.id }}" class="alert-link">Clone</a> to recreate this container with modified settings.
 </div>
 
 <div class="card mb-4">

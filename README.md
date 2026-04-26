@@ -16,8 +16,9 @@ The primary goal of this project is to leverage Barbican as a **simple, zero-ins
 
 ## Features
 
-- **Full Barbican API coverage** — all 16 CLI-equivalent operations:
+- **Full Barbican API coverage** — all 20 CLI-equivalent operations:
   - Secrets: store, list, get, delete, update
+  - Secret Metadata: get, set, update-key, delete-key
   - Containers: create, list, get, delete
   - Consumers: create, list, delete
   - Orders: create, list, get, delete
@@ -26,6 +27,8 @@ The primary goal of this project is to leverage Barbican as a **simple, zero-ins
   - **Simple** — plain text or binary
   - **Key-Value** — dynamic key-value pairs stored as JSON
   - **JSON** — graphical tree/code/form editor powered by JSONEditor (similar to HashiCorp Vault)
+- **Secret User Metadata** — editable key-value tags on secrets (the only mutable data in Barbican), with inline add/remove
+- **Clone / Recreate** — duplicate any secret or container with one click; pre-fills the creation form with all existing data including payload, metadata, and secret references — the recommended workflow for "editing" immutable Barbican resources
 - **OpenStack Keystone authentication** — users log in with their own credentials; auto-detect project Name vs ID
 - **Region-aware** — select OpenStack region at login; Barbican endpoint discovered per-region from service catalog
 - **Minimal permissions** — requires only Barbican `creator` role, no admin access

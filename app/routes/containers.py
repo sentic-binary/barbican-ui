@@ -59,7 +59,29 @@ def create_container():
                 s["id"] = _extract_id(s.get("secret_ref", ""))
         except BarbicanError:
             secrets = []
-        return render_template("containers/create.html", auth=auth, secrets=secrets)
+
+        # Clone: pre-fill from existing container
+        clone_data = {}
+        clone_from = request.args.get("clone_from", "").strip()
+        if clone_from:
+            try:
+                validate_resource_id(clone_from)
+                ctr = barbican.container_get(
+                    auth.barbican_endpoint, auth.token, auth.project_id, clone_from
+                )
+                clone_data["name"] = (ctr.get("name", "") or "") + "-copy"
+                clone_data["type"] = ctr.get("type", "generic")
+                clone_refs = []
+                for sr in ctr.get("secret_refs", []):
+                    clone_refs.append({
+                        "name": sr.get("name", ""),
+                        "secret_id": _extract_id(sr.get("secret_ref", "")),
+                    })
+                clone_data["secret_refs"] = clone_refs
+            except (BarbicanError, ValueError, Exception):
+                pass
+
+        return render_template("containers/create.html", auth=auth, secrets=secrets, clone=clone_data)
 
     name = request.form.get("name", "").strip()
     container_type = request.form.get("type", "generic")

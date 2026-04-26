@@ -1,7 +1,8 @@
 """Barbican UI – Barbican API client.
 
-Covers all 16 CLI-equivalent operations:
+Covers all 20 CLI-equivalent operations:
   Secrets:    store, list, get, delete, update
+  Secret Metadata: get, set, update-key, delete-key
   Containers: create, list, get, delete
   Consumers:  create, list, delete
   Orders:     create, list, get, delete
@@ -240,6 +241,86 @@ def secret_update(
     _check(resp, (200, 204))
     cache_invalidate_prefix(_cache_key(project_id, f"secrets:{secret_id}"))
     cache_invalidate_prefix(_cache_key(project_id, "secrets:list"))
+
+
+# ── Secret Metadata ─────────────────────────────────────────────────────────
+
+def secret_metadata_get(
+    endpoint: str,
+    token: str,
+    project_id: str,
+    secret_id: str,
+) -> dict[str, str]:
+    """GET /v1/secrets/{id}/metadata — get all user metadata."""
+    ck = _cache_key(project_id, f"secrets:{secret_id}:metadata")
+    cached = cache_get(ck)
+    if cached is not None:
+        return cached
+
+    resp = _request(
+        "GET",
+        _url(endpoint, f"v1/secrets/{secret_id}/metadata"),
+        headers=_headers(token),
+    )
+    _check(resp)
+    data = resp.json()
+    cache_set(ck, data)
+    return data
+
+
+def secret_metadata_set(
+    endpoint: str,
+    token: str,
+    project_id: str,
+    secret_id: str,
+    metadata: dict[str, str],
+) -> dict[str, str]:
+    """PUT /v1/secrets/{id}/metadata — replace all user metadata."""
+    resp = _request(
+        "PUT",
+        _url(endpoint, f"v1/secrets/{secret_id}/metadata"),
+        json={"metadata": metadata},
+        headers=_headers(token),
+    )
+    _check(resp)
+    cache_invalidate_prefix(_cache_key(project_id, f"secrets:{secret_id}:metadata"))
+    return resp.json()
+
+
+def secret_metadata_update(
+    endpoint: str,
+    token: str,
+    project_id: str,
+    secret_id: str,
+    key: str,
+    value: str,
+) -> None:
+    """POST /v1/secrets/{id}/metadata — add a single metadata key-value."""
+    resp = _request(
+        "POST",
+        _url(endpoint, f"v1/secrets/{secret_id}/metadata"),
+        json={"key": key, "value": value},
+        headers=_headers(token),
+    )
+    _check(resp, (200, 201))
+    cache_invalidate_prefix(_cache_key(project_id, f"secrets:{secret_id}:metadata"))
+
+
+def secret_metadata_delete(
+    endpoint: str,
+    token: str,
+    project_id: str,
+    secret_id: str,
+    key: str,
+) -> None:
+    """DELETE /v1/secrets/{id}/metadata/{key} — delete a single metadata key."""
+    resp = _request(
+        "DELETE",
+        _url(endpoint, f"v1/secrets/{secret_id}/metadata/{key}"),
+        headers=_headers(token),
+    )
+    _check(resp, (200, 204))
+    cache_invalidate_prefix(_cache_key(project_id, f"secrets:{secret_id}:metadata"))
 
 
 # ── Containers ──────────────────────────────────────────────────────────────

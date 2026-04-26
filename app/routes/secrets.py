@@ -113,6 +113,9 @@ def create_secret():
 
     if request.method == "GET":
         path_prefix = request.args.get("path", "").strip().strip(PATH_SEP)
+        clone_from = request.args.get("clone_from", "").strip()
+
+        # Fetch folder tree for autocomplete
         try:
             all_data = barbican.secret_list(
                 auth.barbican_endpoint, auth.token, auth.project_id, limit=500
@@ -121,9 +124,58 @@ def create_secret():
         except BarbicanError:
             all_secrets = []
         tree = _build_folder_tree(all_secrets)
+
+        # Clone: pre-fill from existing secret
+        clone_data = {}
+        if clone_from:
+            try:
+                validate_resource_id(clone_from)
+                meta = barbican.secret_get(
+                    auth.barbican_endpoint, auth.token, auth.project_id, clone_from
+                )
+                original_name = meta.get("name", "") or ""
+                # Split into path + short name
+                if PATH_SEP in original_name:
+                    clone_path, clone_short = original_name.rsplit(PATH_SEP, 1)
+                    path_prefix = clone_path
+                else:
+                    clone_short = original_name
+                clone_data["name"] = clone_short + "-copy" if clone_short else ""
+                clone_data["secret_type"] = meta.get("secret_type", "opaque")
+                clone_data["algorithm"] = meta.get("algorithm", "") or ""
+                clone_data["bit_length"] = meta.get("bit_length", "") or ""
+                clone_data["mode"] = meta.get("mode", "") or ""
+                clone_data["expiration"] = meta.get("expiration", "") or ""
+
+                # Try to fetch payload
+                if meta.get("status") == "ACTIVE":
+                    try:
+                        ct = meta.get("content_types", {})
+                        accept = ct.get("default", "text/plain") if ct else "text/plain"
+                        clone_data["payload"] = barbican.secret_get_payload(
+                            auth.barbican_endpoint, auth.token, auth.project_id,
+                            clone_from, accept=accept,
+                        )
+                        clone_data["payload_content_type"] = accept
+                    except BarbicanError:
+                        clone_data["payload"] = ""
+                        clone_data["payload_content_type"] = "text/plain"
+
+                # Try to fetch user metadata
+                try:
+                    user_meta = barbican.secret_metadata_get(
+                        auth.barbican_endpoint, auth.token, auth.project_id, clone_from
+                    )
+                    clone_data["user_metadata"] = user_meta
+                except BarbicanError:
+                    clone_data["user_metadata"] = {}
+            except (BarbicanError, ValueError, Exception):
+                pass
+
         return render_template(
             "secrets/create.html", auth=auth,
             path_prefix=path_prefix, all_paths=tree["all_paths"],
+            clone=clone_data,
         )
 
     # POST — build full name from path + name
@@ -207,6 +259,15 @@ def get_secret(secret_id: str):
 
     meta["id"] = secret_id
 
+    # Fetch user metadata
+    user_metadata = {}
+    try:
+        user_metadata = barbican.secret_metadata_get(
+            auth.barbican_endpoint, auth.token, auth.project_id, secret_id
+        )
+    except BarbicanError:
+        pass
+
     # Derive parent path for back navigation
     secret_name = meta.get("name", "") or ""
     parent_path = ""
@@ -217,6 +278,7 @@ def get_secret(secret_id: str):
         "secrets/detail.html",
         secret=meta, payload=payload, payload_json=payload_json,
         payload_error=payload_error, parent_path=parent_path, auth=auth,
+        user_metadata=user_metadata,
     )
 
 
@@ -266,4 +328,46 @@ def delete_secret(secret_id: str):
         flash(safe_error_message(exc), "danger")
 
     return redirect(url_for("secrets.list_secrets"))
+
+
+@secrets_bp.route("/<secret_id>/metadata/add", methods=["POST"])
+@login_required
+def add_metadata(secret_id: str):
+    validate_resource_id(secret_id)
+    auth = get_auth()
+    key = request.form.get("meta_key", "").strip()
+    value = request.form.get("meta_value", "").strip()
+    if not key:
+        flash("Metadata key cannot be empty.", "warning")
+        return redirect(url_for("secrets.get_secret", secret_id=secret_id))
+    try:
+        barbican.secret_metadata_update(
+            auth.barbican_endpoint, auth.token, auth.project_id,
+            secret_id, key=key, value=value,
+        )
+        flash(f"Metadata '{key}' added.", "success")
+    except BarbicanError as exc:
+        flash(safe_error_message(exc), "danger")
+    return redirect(url_for("secrets.get_secret", secret_id=secret_id))
+
+
+@secrets_bp.route("/<secret_id>/metadata/delete", methods=["POST"])
+@login_required
+def delete_metadata(secret_id: str):
+    validate_resource_id(secret_id)
+    auth = get_auth()
+    key = request.form.get("meta_key", "").strip()
+    if not key:
+        flash("Metadata key cannot be empty.", "warning")
+        return redirect(url_for("secrets.get_secret", secret_id=secret_id))
+    try:
+        barbican.secret_metadata_delete(
+            auth.barbican_endpoint, auth.token, auth.project_id,
+            secret_id, key=key,
+        )
+        flash(f"Metadata '{key}' removed.", "success")
+    except BarbicanError as exc:
+        flash(safe_error_message(exc), "danger")
+    return redirect(url_for("secrets.get_secret", secret_id=secret_id))
+
 

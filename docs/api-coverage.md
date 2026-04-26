@@ -11,17 +11,21 @@ This document maps every `openstack secret` CLI command to its corresponding Bar
 | 3 | `secret get` | `GET /v1/secrets/{id}` + `GET /v1/secrets/{id}/payload` | Secrets → Detail (metadata + reveal payload) | ✅ |
 | 4 | `secret delete` | `DELETE /v1/secrets/{id}` | Secrets → Detail → Delete button | ✅ |
 | 5 | `secret update` | `PUT /v1/secrets/{id}` | Secrets → Detail → Set Payload form (Simple / KV / JSON) | ✅ |
-| 6 | `secret container create` | `POST /v1/containers` | Containers → Create (select secrets to link) | ✅ |
-| 7 | `secret container list` | `GET /v1/containers` | Containers → List (with pagination) | ✅ |
-| 8 | `secret container get` | `GET /v1/containers/{id}` | Containers → Detail (metadata + linked secrets) | ✅ |
-| 9 | `secret container delete` | `DELETE /v1/containers/{id}` | Containers → Detail → Delete button | ✅ |
-| 10 | `secret consumer create` | `POST /v1/containers/{id}/consumers` | Containers → Detail → Register Consumer form | ✅ |
-| 11 | `secret consumer list` | `GET /v1/containers/{id}/consumers` | Containers → Detail → Consumers table | ✅ |
-| 12 | `secret consumer delete` | `DELETE /v1/containers/{id}/consumers` | Containers → Detail → Remove consumer button | ✅ |
-| 13 | `secret order create` | `POST /v1/orders` | Orders → Create (key / asymmetric / certificate) | ✅ |
-| 14 | `secret order list` | `GET /v1/orders` | Orders → List (with pagination) | ✅ |
-| 15 | `secret order get` | `GET /v1/orders/{id}` | Orders → Detail (metadata + generated secret link) | ✅ |
-| 16 | `secret order delete` | `DELETE /v1/orders/{id}` | Orders → Detail → Delete button | ✅ |
+| 6 | `secret metadata get` | `GET /v1/secrets/{id}/metadata` | Secrets → Detail → User Metadata table | ✅ |
+| 7 | `secret metadata set` | `PUT /v1/secrets/{id}/metadata` | Secrets → Detail → User Metadata (replace all) | ✅ |
+| 8 | `secret metadata update` | `POST /v1/secrets/{id}/metadata` | Secrets → Detail → User Metadata → Add button | ✅ |
+| 9 | `secret metadata delete` | `DELETE /v1/secrets/{id}/metadata/{key}` | Secrets → Detail → User Metadata → Remove button | ✅ |
+| 10 | `secret container create` | `POST /v1/containers` | Containers → Create (select secrets to link) | ✅ |
+| 11 | `secret container list` | `GET /v1/containers` | Containers → List (with pagination) | ✅ |
+| 12 | `secret container get` | `GET /v1/containers/{id}` | Containers → Detail (metadata + linked secrets) | ✅ |
+| 13 | `secret container delete` | `DELETE /v1/containers/{id}` | Containers → Detail → Delete button | ✅ |
+| 14 | `secret consumer create` | `POST /v1/containers/{id}/consumers` | Containers → Detail → Register Consumer form | ✅ |
+| 15 | `secret consumer list` | `GET /v1/containers/{id}/consumers` | Containers → Detail → Consumers table | ✅ |
+| 16 | `secret consumer delete` | `DELETE /v1/containers/{id}/consumers` | Containers → Detail → Remove consumer button | ✅ |
+| 17 | `secret order create` | `POST /v1/orders` | Orders → Create (key / asymmetric / certificate) | ✅ |
+| 18 | `secret order list` | `GET /v1/orders` | Orders → List (with pagination) | ✅ |
+| 19 | `secret order get` | `GET /v1/orders/{id}` | Orders → Detail (metadata + generated secret link) | ✅ |
+| 20 | `secret order delete` | `DELETE /v1/orders/{id}` | Orders → Detail → Delete button | ✅ |
 
 ## Special Features Beyond CLI
 
@@ -36,6 +40,8 @@ This document maps every `openstack secret` CLI command to its corresponding Bar
 | **Pagination** | All list views are paginated |
 | **Disk Cache** | Responses cached to minimize API calls, with automatic invalidation on mutations |
 | **Export / Import** | Migrate secrets and containers between Barbican instances, regions, or projects via versioned JSON files |
+| **Secret User Metadata** | Editable key-value tags on secrets — the only mutable data in Barbican. Add, view, and remove metadata inline from the secret detail page |
+| **Clone / Recreate** | Duplicate any secret or container with one click. Pre-fills the creation form with all existing data (metadata, payload, secret refs). Recommended workflow for "editing" immutable resources |
 
 ## Container Types Supported
 
