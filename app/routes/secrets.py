@@ -188,6 +188,28 @@ def create_secret():
             except BarbicanError:
                 clone_data["user_metadata"] = {}
 
+            # For replace mode: find containers that reference this secret
+            if is_replace:
+                affected_containers = []
+                try:
+                    c_data = barbican.container_list(
+                        auth.barbican_endpoint, auth.token, auth.project_id, limit=500
+                    )
+                    old_secret_ref_suffix = f"/v1/secrets/{source_id}"
+                    for ctr in c_data.get("containers", []):
+                        for sr in ctr.get("secret_refs", []):
+                            if sr.get("secret_ref", "").endswith(old_secret_ref_suffix):
+                                affected_containers.append({
+                                    "id": _extract_id(ctr.get("container_ref", "")),
+                                    "name": ctr.get("name", ""),
+                                    "type": ctr.get("type", "generic"),
+                                    "ref_count": len(ctr.get("secret_refs", [])),
+                                })
+                                break
+                except BarbicanError:
+                    pass
+                clone_data["affected_containers"] = affected_containers
+
         return render_template(
             "secrets/create.html", auth=auth,
             path_prefix=path_prefix, all_paths=tree["all_paths"],
@@ -209,6 +231,7 @@ def create_secret():
     mode = request.form.get("mode", "").strip()
     expiration = request.form.get("expiration", "").strip()
     replace_id = request.form.get("replace_id", "").strip()
+    update_containers = request.form.get("update_containers") == "on"
 
     if payload_mode == "kv":
         keys = request.form.getlist("kv_key")
@@ -223,10 +246,25 @@ def create_secret():
         payload = request.form.get("payload", "")
         content_type = request.form.get("payload_content_type", "text/plain")
 
-    # Replace mode: delete the old secret first
+    # Replace mode: delete the old secret first, collect affected containers
+    affected_containers = []
     if replace_id:
         try:
             validate_resource_id(replace_id)
+            # If user opted in, find containers referencing the old secret
+            if update_containers:
+                try:
+                    c_data = barbican.container_list(
+                        auth.barbican_endpoint, auth.token, auth.project_id, limit=500
+                    )
+                    old_secret_ref_suffix = f"/v1/secrets/{replace_id}"
+                    for ctr in c_data.get("containers", []):
+                        for sr in ctr.get("secret_refs", []):
+                            if sr.get("secret_ref", "").endswith(old_secret_ref_suffix):
+                                affected_containers.append(ctr)
+                                break
+                except BarbicanError:
+                    pass
             barbican.secret_delete(
                 auth.barbican_endpoint, auth.token, auth.project_id, replace_id
             )
@@ -243,8 +281,152 @@ def create_secret():
             mode=mode, expiration=expiration,
         )
         secret_id = _extract_id(result.get("secret_ref", ""))
+        new_secret_ref = f"{auth.barbican_endpoint}/v1/secrets/{secret_id}"
+
+        # Cascade: replace affected containers with updated secret reference
+        container_results = []
+        for ctr in affected_containers:
+            ctr_id = _extract_id(ctr.get("container_ref", ""))
+            ctr_name = ctr.get("name", ctr_id)
+            ctr_result = {
+                "name": ctr_name,
+                "old_id": ctr_id,
+                "new_id": None,
+                "status": "pending",
+                "step": "",
+                "error": "",
+                "lost_consumers": [],
+                "failed_consumers": [],
+            }
+
+            # Build new secret_refs with the old secret ref replaced
+            old_secret_ref_suffix = f"/v1/secrets/{replace_id}"
+            new_refs = []
+            for sr in ctr.get("secret_refs", []):
+                if sr.get("secret_ref", "").endswith(old_secret_ref_suffix):
+                    new_refs.append({"name": sr.get("name", ""), "secret_ref": new_secret_ref})
+                else:
+                    new_refs.append({"name": sr.get("name", ""), "secret_ref": sr.get("secret_ref", "")})
+
+            # Step 1: Fetch consumers
+            old_consumers = []
+            try:
+                ctr_result["step"] = "fetch_consumers"
+                cons_data = barbican.consumer_list(
+                    auth.barbican_endpoint, auth.token, auth.project_id, ctr_id
+                )
+                old_consumers = cons_data.get("consumers", [])
+            except BarbicanError:
+                pass  # Non-fatal: we can still proceed without consumers
+
+            # Step 2: Remove consumers to allow deletion
+            ctr_result["step"] = "remove_consumers"
+            for consumer in old_consumers:
+                try:
+                    barbican.consumer_delete(
+                        auth.barbican_endpoint, auth.token, auth.project_id, ctr_id,
+                        name=consumer.get("name", ""), url=consumer.get("URL", ""),
+                    )
+                except BarbicanError:
+                    pass  # Best effort; deletion may still work
+
+            # Step 3: Delete old container
+            try:
+                ctr_result["step"] = "delete_container"
+                barbican.container_delete(
+                    auth.barbican_endpoint, auth.token, auth.project_id, ctr_id
+                )
+            except BarbicanError as exc:
+                ctr_result["status"] = "failed"
+                ctr_result["error"] = f"Could not delete old container: {safe_error_message(exc)}"
+                container_results.append(ctr_result)
+                continue
+
+            # Step 4: Create new container
+            try:
+                ctr_result["step"] = "create_container"
+                new_ctr = barbican.container_create(
+                    auth.barbican_endpoint, auth.token, auth.project_id,
+                    name=ctr.get("name", ""), container_type=ctr.get("type", "generic"),
+                    secret_refs=new_refs,
+                )
+                new_ctr_id = _extract_id(new_ctr.get("container_ref", ""))
+                ctr_result["new_id"] = new_ctr_id
+            except BarbicanError as exc:
+                # Critical: old container deleted but new one not created
+                ctr_result["status"] = "lost"
+                ctr_result["error"] = (
+                    f"Old container was deleted but re-creation failed: {safe_error_message(exc)}. "
+                    f"Container '{ctr_name}' (type: {ctr.get('type', 'generic')}) with "
+                    f"{len(new_refs)} secret ref(s) needs manual re-creation."
+                )
+                ctr_result["lost_consumers"] = [
+                    {"name": c.get("name", ""), "URL": c.get("URL", "")}
+                    for c in old_consumers
+                ]
+                container_results.append(ctr_result)
+                continue
+
+            # Step 5: Re-register consumers
+            ctr_result["step"] = "register_consumers"
+            for consumer in old_consumers:
+                try:
+                    barbican.consumer_create(
+                        auth.barbican_endpoint, auth.token, auth.project_id, new_ctr_id,
+                        name=consumer.get("name", ""), url=consumer.get("URL", ""),
+                    )
+                except BarbicanError:
+                    ctr_result["failed_consumers"].append(
+                        {"name": consumer.get("name", ""), "URL": consumer.get("URL", "")}
+                    )
+
+            ctr_result["status"] = "ok" if not ctr_result["failed_consumers"] else "partial"
+            container_results.append(ctr_result)
+
+        # Build detailed flash messages
         if replace_id:
+            ok = [r for r in container_results if r["status"] == "ok"]
+            partial = [r for r in container_results if r["status"] == "partial"]
+            failed = [r for r in container_results if r["status"] == "failed"]
+            lost = [r for r in container_results if r["status"] == "lost"]
+
             flash("Secret replaced successfully.", "success")
+
+            if ok:
+                flash(f"{len(ok)} container(s) updated successfully: "
+                      + ", ".join(r["name"] for r in ok) + ".", "success")
+
+            for r in partial:
+                consumer_info = "; ".join(
+                    f"{c['name']} ({c['URL']})" for c in r["failed_consumers"]
+                )
+                flash(
+                    f"Container '{r['name']}' updated but {len(r['failed_consumers'])} "
+                    f"consumer(s) could not be re-registered: {consumer_info}. "
+                    f"Please re-add them manually on the new container.",
+                    "warning",
+                )
+
+            for r in failed:
+                flash(
+                    f"Container '{r['name']}' could not be updated — {r['error']} "
+                    f"The container still references the old secret ID.",
+                    "danger",
+                )
+
+            for r in lost:
+                consumer_info = ""
+                if r["lost_consumers"]:
+                    consumer_info = (
+                        " Lost consumers: "
+                        + "; ".join(f"{c['name']} ({c['URL']})" for c in r["lost_consumers"])
+                        + "."
+                    )
+                flash(
+                    f"⚠️ Container '{r['name']}' was DELETED but could NOT be re-created. "
+                    f"{r['error']}{consumer_info}",
+                    "danger",
+                )
         else:
             flash("Secret created successfully.", "success")
         return redirect(url_for("secrets.get_secret", secret_id=secret_id))
