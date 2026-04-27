@@ -112,10 +112,28 @@ def create_container():
                 "secret_ref": f"{auth.barbican_endpoint}/v1/secrets/{ri}",
             })
 
-    # Replace mode: delete the old container first
+    # Replace mode: save consumers, delete the old container, then re-register them
+    old_consumers = []
     if replace_id:
         try:
             validate_resource_id(replace_id)
+            # Fetch consumers before deleting
+            try:
+                c_data = barbican.consumer_list(
+                    auth.barbican_endpoint, auth.token, auth.project_id, replace_id
+                )
+                old_consumers = c_data.get("consumers", [])
+            except BarbicanError:
+                pass
+            # Remove consumers so Barbican allows deletion
+            for consumer in old_consumers:
+                try:
+                    barbican.consumer_delete(
+                        auth.barbican_endpoint, auth.token, auth.project_id, replace_id,
+                        name=consumer.get("name", ""), url=consumer.get("URL", ""),
+                    )
+                except BarbicanError:
+                    pass
             barbican.container_delete(
                 auth.barbican_endpoint, auth.token, auth.project_id, replace_id
             )
@@ -129,6 +147,15 @@ def create_container():
             name=name, container_type=container_type, secret_refs=secret_refs,
         )
         cid = _extract_id(result.get("container_ref", ""))
+        # Re-register consumers on the new container
+        for consumer in old_consumers:
+            try:
+                barbican.consumer_create(
+                    auth.barbican_endpoint, auth.token, auth.project_id, cid,
+                    name=consumer.get("name", ""), url=consumer.get("URL", ""),
+                )
+            except BarbicanError:
+                pass
         if replace_id:
             flash("Container replaced.", "success")
         else:
