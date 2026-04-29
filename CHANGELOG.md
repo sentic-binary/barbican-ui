@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.4.0](https://github.com/sentic-binary/barbican-ui/compare/v1.3.0...v1.4.0) (2026-04-29)
+
+
+### Features
+
+* add possibility to cloning secrets ([5d46156](https://github.com/sentic-binary/barbican-ui/commit/5d4615645f4fbd2d57b9e0c35a83becedcc2de97))
+* introduce replace feature ([ebbdef8](https://github.com/sentic-binary/barbican-ui/commit/ebbdef8f1ead51ec1e074886b0cb06346b1333d7))
+
+
+### Bug Fixes
+
+* recreate container when replcaing secret ([8a177d5](https://github.com/sentic-binary/barbican-ui/commit/8a177d5931b71debb69c818dfa702771ff987848))
+* resolve issue about lost consumers when replacing container ([4fdc28d](https://github.com/sentic-binary/barbican-ui/commit/4fdc28dd89ff8338db4270093e441b79cb4cf35b))
+* resolve various minor bugs for clone/replace features ([bed90de](https://github.com/sentic-binary/barbican-ui/commit/bed90de2e7e888517ca430d12d256b3c88b08ffa))
+
 ## [1.3.0](https://github.com/sentic-binary/barbican-ui/compare/v1.2.0...v1.3.0) (2026-04-25)
 
 
